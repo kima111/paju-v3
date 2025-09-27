@@ -51,17 +51,18 @@ export default function Home() {
       {/* Hero Section - Clean minimal design with icon */}
       <section id="home" className="relative h-screen flex items-center justify-center bg-black">
         <div className="relative text-center max-w-4xl mx-auto px-6">
+          {/* Icon with zoom and fade animation */}
+          <div className="mb-12">
+            <Image
+              src="/icon.svg"
+              alt="Paju Symbol"
+              width={120}
+              height={120}
+              className="mx-auto opacity-90 animate-draw-in"
+            />
+          </div>
+          
           <div className="animate-fade-in-up">
-            {/* Icon above PAJU */}
-            <div className="mb-12">
-              <Image
-                src="/icon.svg"
-                alt="Paju Symbol"
-                width={120}
-                height={120}
-                className="mx-auto opacity-90"
-              />
-            </div>
             <h1 className="font-display text-6xl md:text-8xl font-light mb-12 tracking-tight">
               PAJU
             </h1>
@@ -144,7 +145,7 @@ export default function Home() {
             <div className="group cursor-pointer">
               <div className="relative aspect-square bg-zinc-900 mb-8 overflow-hidden rounded-sm">
                 <Image
-                  src="/images/gallery/cauliflower.jpg"
+                  src="/images/gallery/cauliflower_dish.jpg"
                   alt="Cauliflower"
                   fill
                   className="object-cover group-hover:scale-105 transition-transform duration-700 opacity-85 group-hover:opacity-100"
@@ -160,7 +161,7 @@ export default function Home() {
             <div className="group cursor-pointer">
               <div className="relative aspect-square bg-zinc-900 mb-8 overflow-hidden rounded-sm">
                 <Image
-                  src="/images/gallery/dry_aged_new_york_steak.jpg"
+                  src="/images/gallery/dry_aged_new_york_steak_dish.jpg"
                   alt="Dry Aged New York Steak 14oz"
                   fill
                   className="object-cover group-hover:scale-105 transition-transform duration-700 opacity-85 group-hover:opacity-100"
@@ -208,7 +209,7 @@ export default function Home() {
             <div className="group cursor-pointer">
               <div className="relative aspect-square bg-zinc-900 mb-8 overflow-hidden rounded-sm">
                 <Image
-                  src="/images/gallery/brazino_gui.jpg"
+                  src="/images/gallery/brazino_gui_dish.jpg"
                   alt="Brazino Gui"
                   fill
                   className="object-cover group-hover:scale-105 transition-transform duration-700 opacity-85 group-hover:opacity-100"
