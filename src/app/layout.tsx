@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     siteName: "Paju Restaurant",
     images: [
       {
-        url: "/images/restaurant.jpg",
+        url: "/images/PajuOutdoor.png",
         width: 1200,
         height: 630,
         alt: "Paju Restaurant Interior",
