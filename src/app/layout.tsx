@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Paju - Innovative Korean Cuisine in Seattle",
     description: "Experience exceptional Korean cuisine at Paju, Seattle's celebrated dining destination featuring innovative dishes, locally-sourced ingredients, and warm hospitality.",
-    url: "https://pajuseattle.com",
+    url: "https://pajurestaurant.com",
     siteName: "Paju Restaurant",
     images: [
       {
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Paju - Innovative Korean Cuisine in Seattle",
     description: "Experience exceptional Korean cuisine at Paju, Seattle's celebrated dining destination.",
-    images: ["/images/restaurant.jpg"],
+    images: ["/images/PajuOutdoor.png"],
   },
   robots: {
     index: true,

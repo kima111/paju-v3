@@ -51,13 +51,6 @@ export default function Home() {
       {/* Hero Section - Full viewport with restaurant image */}
       <section id="home" className="relative h-screen flex items-center justify-center">
         <div className="absolute inset-0">
-          <Image
-            src="/images/restaurant.jpg"
-            alt="Paju Restaurant Interior"
-            fill
-            className="object-cover"
-            priority
-          />
           <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-black/80 z-10"></div>
         </div>
         
@@ -84,7 +77,7 @@ export default function Home() {
       {/* About Section - Minimal and elegant */}
       <section className="py-32 px-6">
         <div className="max-w-4xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-16 items-center">
+          <div className="grid md:grid-cols-2 gap-8 items-center">
             <div className="space-y-8">
               <div>
                 <div className="text-xs tracking-[0.3em] uppercase text-white/60 mb-6">Our Philosophy</div>
@@ -102,9 +95,9 @@ export default function Home() {
               </div>
             </div>
             <div className="relative">
-              <div className="aspect-[4/5] bg-zinc-900 rounded-sm overflow-hidden">
+              <div className="aspect-[1] bg-zinc-900 rounded-sm overflow-hidden">
                 <Image
-                  src="/images/about_paju.jpg"
+                  src="/images/bibi.png"
                   alt="About Paju Restaurant"
                   fill
                   className="object-cover opacity-80 hover:opacity-90 transition-opacity duration-500"
