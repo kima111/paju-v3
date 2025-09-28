@@ -7,7 +7,6 @@ import HoursManagement from '../../../components/cms/HoursManagement';
 
 export default function CMSDashboard() {
   const [activeTab, setActiveTab] = useState('menu');
-  const [user, setUser] = useState(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -19,7 +18,7 @@ export default function CMSDashboard() {
         if (response.status === 401) {
           router.push('/cms/login');
         }
-      } catch (error) {
+      } catch {
         router.push('/cms/login');
       }
     };

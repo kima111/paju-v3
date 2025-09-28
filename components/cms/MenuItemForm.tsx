@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import Image from 'next/image';
 import type { MenuItem, MenuCategory } from '../../lib/database';
 
 interface MenuItemFormProps {
@@ -198,11 +199,12 @@ export default function MenuItemForm({ onSubmit, onCancel, categories, editingIt
               
               {formData.imageUrl ? (
                 <div className="space-y-3">
-                  <div className="w-full h-48 bg-zinc-900 border border-zinc-700 rounded-lg overflow-hidden">
-                    <img 
+                  <div className="w-full h-48 bg-zinc-900 border border-zinc-700 rounded-lg overflow-hidden relative">
+                    <Image 
                       src={formData.imageUrl} 
                       alt="Preview"
-                      className="w-full h-full object-cover"
+                      fill
+                      className="object-cover"
                     />
                   </div>
                   <div className="flex space-x-2">
