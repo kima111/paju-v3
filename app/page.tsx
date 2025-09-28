@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import MenuSection from "../components/MenuSection";
+import RestaurantHoursDisplay from "../components/RestaurantHoursDisplay";
 
 export default function Home() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -115,115 +117,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Menu Highlights - Clean grid with food images */}
-      <section id="menu" className="py-32 px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-24">
-            <div className="text-xs tracking-[0.3em] uppercase text-white/60 mb-6">Signature Dishes</div>
-            <h2 className="font-display text-4xl md:text-5xl font-light">
-              Culinary Excellence
-            </h2>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-16">
-            <div className="group cursor-pointer">
-              <div className="relative aspect-square bg-zinc-900 mb-8 overflow-hidden rounded-sm">
-                <Image
-                  src="/images/fried_rice.jpg"
-                  alt="Korean Rice Bowl"
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-700 opacity-85 group-hover:opacity-100"
-                />
-              </div>
-              <div className="space-y-4">
-                <h3 className="font-light text-xl tracking-wide">Korean Rice Bowl</h3>
-                <p className="text-white/60 text-sm leading-loose">Traditional bibimbap elevated with seasonal Pacific Northwest ingredients</p>
-                <div className="text-white/40 text-xs tracking-wider">$32</div>
-              </div>
-            </div>
-
-            <div className="group cursor-pointer">
-              <div className="relative aspect-square bg-zinc-900 mb-8 overflow-hidden rounded-sm">
-                <Image
-                  src="/images/gallery/cauliflower_dish.jpg"
-                  alt="Cauliflower"
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-700 opacity-85 group-hover:opacity-100"
-                />
-              </div>
-              <div className="space-y-4">
-                <h3 className="font-light text-xl tracking-wide">Cauliflower</h3>
-                <p className="text-white/60 text-sm leading-loose">Almond, Sesame Seed, Mint</p>
-                <div className="text-white/40 text-xs tracking-wider">$19</div>
-              </div>
-            </div>
-
-            <div className="group cursor-pointer">
-              <div className="relative aspect-square bg-zinc-900 mb-8 overflow-hidden rounded-sm">
-                <Image
-                  src="/images/gallery/dry_aged_new_york_steak_dish.jpg"
-                  alt="Dry Aged New York Steak 14oz"
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-700 opacity-85 group-hover:opacity-100"
-                />
-              </div>
-              <div className="space-y-4">
-                <h3 className="font-light text-xl tracking-wide">Dry Aged New York Steak 14oz</h3>
-                <p className="text-white/60 text-sm leading-loose">Served With Our Seasonal Banchan</p>
-                <div className="text-white/40 text-xs tracking-wider">$45</div>
-              </div>
-            </div>
-
-            <div className="group cursor-pointer">
-              <div className="relative aspect-square bg-zinc-900 mb-8 overflow-hidden rounded-sm">
-                <Image
-                  src="/images/crispy_pancake.jpg"
-                  alt="Spicy Noodle Soup"
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-700 opacity-85 group-hover:opacity-100"
-                />
-              </div>
-              <div className="space-y-4">
-                <h3 className="font-light text-xl tracking-wide">Seafood Jeon</h3>
-                <p className="text-white/60 text-sm leading-loose">Traditional pajeon with Perilla Leaves, Bonito Flakes</p>
-                <div className="text-white/40 text-xs tracking-wider">$28</div>
-              </div>
-            </div>
-
-            <div className="group cursor-pointer">
-              <div className="relative aspect-square bg-zinc-900 mb-8 overflow-hidden rounded-sm">
-                <Image
-                  src="/images/chicken.jpg"
-                  alt="Korean Fried Chicken"
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-700 opacity-85 group-hover:opacity-100"
-                />
-              </div>
-              <div className="space-y-4">
-                <h3 className="font-light text-xl tracking-wide">Korean Fried Chicken</h3>
-                <p className="text-white/60 text-sm leading-loose">Crispy double-fried chicken with house gochujang glaze</p>
-                <div className="text-white/40 text-xs tracking-wider">$26</div>
-              </div>
-            </div>
-
-            <div className="group cursor-pointer">
-              <div className="relative aspect-square bg-zinc-900 mb-8 overflow-hidden rounded-sm">
-                <Image
-                  src="/images/gallery/brazino_gui_dish.jpg"
-                  alt="Brazino Gui"
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-700 opacity-85 group-hover:opacity-100"
-                />
-              </div>
-              <div className="space-y-4">
-                <h3 className="font-light text-xl tracking-wide">Brazino Gui</h3>
-                <p className="text-white/60 text-sm leading-loose">Served With Our Seasonal Banchan</p>
-                <div className="text-white/40 text-xs tracking-wider">$51</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Dynamic Menu Section */}
+      <MenuSection />
 
       {/* Chef Section - Personal and authentic */}
       <section id="chef" className="py-32 px-6 bg-zinc-950/30">
@@ -278,27 +173,15 @@ export default function Home() {
               <div className="text-xs tracking-[0.3em] uppercase text-white/60">Location</div>
               <p className="text-white/80 leading-relaxed">Seattle, Washington<br />513 Westlake Avenue North Seattle, WA 98109</p>
             </div>
-            <div className="space-y-4">
-              <div className="text-xs tracking-[0.3em] uppercase text-white/60">Restaurant Hours</div>
-              <div className="text-white/80 leading-relaxed">
-                <p>Monday-Thursday 11AM-2PM, 5PM-9PM</p>
-                <p>Friday 11AM-2PM, 5PM-10PM</p>
-                <p>Saturday 4PM-10PM</p>
-                <p>Sunday Closed</p>
-              </div>
-            </div>
+            <RestaurantHoursDisplay />
             <div className="space-y-4">
               <div className="text-xs tracking-[0.3em] uppercase text-white/60">Contact</div>
-              <p className="text-white/80 leading-relaxed">(206) 829-8215<br /><a href="mailto:jeong.bill@pajuseattle.com">jeong.bill@pajuseattle.com</a></p>
+              <p className="text-white/80 leading-relaxed">
+          <a href="tel:2068298215">(206) 829-8215</a><br /><a href="mailto:jeong.bill@pajuseattle.com">jeong.bill@pajuseattle.com</a></p>
             </div>
           </div>
+            <a href="https://www.exploretock.com/paju" className="inline-block bg-white text-black px-12 py-4 text-xs tracking-[0.2em] uppercase transition-all duration-300 hover:bg-white/90 hover:scale-105"target="_blank" rel="noopener noreferrer">Make Reservation</a>
 
-          <a
-            href="tel:2068298215"
-            className="inline-block bg-white text-black px-12 py-4 text-xs tracking-[0.2em] uppercase transition-all duration-300 hover:bg-white/90 hover:scale-105"
-          >
-            Make Reservation
-          </a>
         </div>
       </section>
 
@@ -313,6 +196,12 @@ export default function Home() {
             <p className="text-white/30 text-xs leading-relaxed">
               © 2024 Paju Restaurant. Contemporary Korean Cuisine.
             </p>
+            <a 
+              href="/cms/login" 
+              className="text-white/20 text-xs hover:text-white/40 transition-colors"
+            >
+              Staff Login
+            </a>
           </div>
         </div>
       </footer>
