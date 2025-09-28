@@ -58,7 +58,7 @@ export interface User {
 }
 
 // In-memory storage (replace with actual database in production)
-let menuItems: MenuItem[] = [
+const menuItems: MenuItem[] = [
   // Sample Lunch Menu
   {
     id: '1',
@@ -200,7 +200,7 @@ let menuItems: MenuItem[] = [
   }
 ];
 
-let restaurantHours: RestaurantHours[] = [
+const restaurantHours: RestaurantHours[] = [
   {
     id: '1',
     dayOfWeek: 'Monday',
@@ -311,7 +311,7 @@ let restaurantHours: RestaurantHours[] = [
 ];
 
 // Default categories
-let menuCategories: MenuCategory[] = [
+const menuCategories: MenuCategory[] = [
   {
     id: '1',
     name: 'Appetizer',
@@ -393,7 +393,7 @@ let menuCategories: MenuCategory[] = [
 ];
 
 // Menu status - controls which menus are enabled/disabled
-let menuStatus: MenuStatus[] = [
+const menuStatus: MenuStatus[] = [
   {
     id: '1',
     menuType: 'breakfast',
@@ -415,7 +415,7 @@ let menuStatus: MenuStatus[] = [
 ];
 
 // Default admin user (password: admin123)
-let users: User[] = [
+const users: User[] = [
   {
     id: '1',
     username: 'admin',

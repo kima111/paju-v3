@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import type { MenuItem, MenuCategory, MenuStatus } from '../../lib/database';
 import MenuItemForm from './MenuItemForm';
 import CategoryForm from './CategoryForm';
@@ -425,11 +426,12 @@ function MenuItemCard({ item, onEdit, onRefresh }: MenuItemCardProps) {
         <div className="flex justify-between items-start mb-4">
           <div className="flex space-x-4 flex-1">
             {/* Image preview */}
-            <div className="w-16 h-16 bg-zinc-800 rounded overflow-hidden flex-shrink-0">
-              <img 
+            <div className="w-16 h-16 bg-zinc-800 rounded overflow-hidden flex-shrink-0 relative">
+              <Image 
                 src={item.imageUrl} 
                 alt={item.title}
-                className="w-full h-full object-cover"
+                fill
+                className="object-cover"
               />
             </div>
             

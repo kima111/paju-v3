@@ -33,7 +33,7 @@ export async function verifyJWT(token: string): Promise<CustomJWTPayload | null>
       username: payload.username as string,
       role: payload.role as string,
     };
-  } catch (error) {
+  } catch {
     return null;
   }
 }

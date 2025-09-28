@@ -51,54 +51,6 @@ export default function MenuSection() {
   );
   const categories = [...new Set(filteredItems.map(item => item.category))];
 
-  // Default image for menu items (you can expand this mapping)
-  const getItemImage = (title: string, category: string) => {
-    const titleLower = title.toLowerCase();
-    
-    // Breakfast items
-    if (titleLower.includes('breakfast') || titleLower.includes('porridge')) {
-      return '/images/fried_rice.jpg';
-    }
-    if (titleLower.includes('croissant') || titleLower.includes('matcha')) {
-      return '/images/crispy_pancake.jpg';
-    }
-    if (titleLower.includes('coffee') || category === 'Beverages') {
-      return '/images/fried_rice.jpg';
-    }
-    
-    // Lunch/Dinner items
-    if (titleLower.includes('rice') || titleLower.includes('bibimbap')) {
-      return '/images/fried_rice.jpg';
-    }
-    if (titleLower.includes('steak') || titleLower.includes('beef')) {
-      return '/images/gallery/dry_aged_new_york_steak.jpg';
-    }
-    if (titleLower.includes('chicken')) {
-      return '/images/chicken.jpg';
-    }
-    if (titleLower.includes('jeon') || titleLower.includes('pancake')) {
-      return '/images/crispy_pancake.jpg';
-    }
-    if (titleLower.includes('brazino') || titleLower.includes('fish')) {
-      return '/images/gallery/brazino_gui.jpg';
-    }
-    if (titleLower.includes('cauliflower')) {
-      return '/images/gallery/cauliflower.jpg';
-    }
-    
-    // Default image based on category
-    if (category === 'Appetizer') {
-      return '/images/crispy_pancake.jpg';
-    }
-    if (category === 'Pastries') {
-      return '/images/crispy_pancake.jpg';
-    }
-    if (category === 'Hot Breakfast') {
-      return '/images/fried_rice.jpg';
-    }
-    return '/images/fried_rice.jpg'; // Default fallback
-  };
-
   if (loading) {
     return (
       <section id="menu" className="py-32 px-6">
