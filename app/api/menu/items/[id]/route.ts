@@ -46,9 +46,13 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+    console.log('DELETE request for menu item ID:', id);
+    
     const menuItem = await DatabaseService.deleteMenuItem(id);
+    console.log('Delete result:', menuItem);
 
     if (!menuItem) {
+      console.log('Menu item not found for ID:', id);
       return NextResponse.json(
         { error: 'Menu item not found' },
         { status: 404 }

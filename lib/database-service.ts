@@ -41,7 +41,7 @@ export class DatabaseService {
   // Users
   static async getUserByUsername(username: string): Promise<User | null> {
     if (process.env.NODE_ENV !== 'production' && devDB?.db) {
-      return devDB.db.getUserByUsername(username);
+      return devDB.db.getUser(username);
     }
     
     try {
@@ -160,7 +160,10 @@ export class DatabaseService {
 
   static async deleteMenuItem(id: string): Promise<MenuItem | null> {
     if (process.env.NODE_ENV !== 'production' && devDB?.db) {
-      return devDB.db.deleteMenuItem(id);
+      console.log('Using devDB for delete, ID:', id);
+      const result = devDB.db.deleteMenuItem(id);
+      console.log('DevDB delete result:', result);
+      return result;
     }
 
     try {

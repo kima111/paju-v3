@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log('Created menu item with ID:', menuItem.id);
     return NextResponse.json(menuItem, { status: 201 });
   } catch (error) {
     console.error('Error creating menu item:', error);

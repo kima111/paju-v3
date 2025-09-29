@@ -42,7 +42,7 @@ export default function MenuItemForm({ onSubmit, onCancel, categories, editingIt
     setIsUploading(true);
     try {
       const formDataForUpload = new FormData();
-      formDataForUpload.append('image', imageFile);
+      formDataForUpload.append('file', imageFile);
       
       const response = await fetch('/api/upload', {
         method: 'POST',

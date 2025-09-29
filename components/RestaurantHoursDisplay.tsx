@@ -6,16 +6,51 @@ import { RestaurantHours } from '../lib/database';
 export default function RestaurantHoursDisplay() {
   const [hours, setHours] = useState<RestaurantHours[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dayGroups, setDayGroups] = useState<RestaurantHours[][]>([]);
 
   useEffect(() => {
     fetchHours();
+    
+    // Set up periodic refresh every 5 seconds to catch CMS changes quickly (for testing)
+    const interval = setInterval(fetchHours, 5000);
+    
+    // Also refresh when the page becomes visible (user switches back to tab)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchHours();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
+
+  // Re-group whenever hours data changes
+  useEffect(() => {
+    if (hours.length > 0) {
+      console.log('Hours data changed, re-grouping...');
+      const groups = groupConsecutiveDays();
+      setDayGroups(groups);
+    }
+  }, [hours]);
 
   const fetchHours = async () => {
     try {
-      const response = await fetch('/api/restaurant/hours');
+      console.log('Fetching restaurant hours...');
+      // Add cache-busting parameter to ensure fresh data
+      const response = await fetch(`/api/restaurant/hours?t=${Date.now()}`, {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
       if (response.ok) {
         const data = await response.json();
+        console.log('Raw fetched hours data:', JSON.stringify(data, null, 2));
         setHours(data);
       }
     } catch (error) {
@@ -65,26 +100,102 @@ export default function RestaurantHoursDisplay() {
     // If one is closed and the other isn't
     if (day1.isClosed !== day2.isClosed) return false;
     
-    // Compare service types and times
-    return (
-      day1.isBreakfastService === day2.isBreakfastService &&
-      day1.breakfastOpenTime === day2.breakfastOpenTime &&
-      day1.breakfastCloseTime === day2.breakfastCloseTime &&
-      day1.isLunchService === day2.isLunchService &&
-      day1.lunchOpenTime === day2.lunchOpenTime &&
-      day1.lunchCloseTime === day2.lunchCloseTime &&
-      day1.isDinnerService === day2.isDinnerService &&
-      day1.dinnerOpenTime === day2.dinnerOpenTime &&
-      day1.dinnerCloseTime === day2.dinnerCloseTime
-    );
+    // Helper function to normalize time values and trim whitespace
+    const normalizeTime = (time: string | undefined | null) => {
+      if (!time || time.trim() === '') return null;
+      return time.trim();
+    };
+    
+    // Helper function to normalize boolean values
+    const normalizeBool = (value: boolean | undefined | null) => !!value;
+    
+    // Detailed field-by-field comparison
+    const comparisons = {
+      isBreakfastService: normalizeBool(day1.isBreakfastService) === normalizeBool(day2.isBreakfastService),
+      breakfastOpenTime: normalizeTime(day1.breakfastOpenTime) === normalizeTime(day2.breakfastOpenTime),
+      breakfastCloseTime: normalizeTime(day1.breakfastCloseTime) === normalizeTime(day2.breakfastCloseTime),
+      isLunchService: normalizeBool(day1.isLunchService) === normalizeBool(day2.isLunchService),
+      lunchOpenTime: normalizeTime(day1.lunchOpenTime) === normalizeTime(day2.lunchOpenTime),
+      lunchCloseTime: normalizeTime(day1.lunchCloseTime) === normalizeTime(day2.lunchCloseTime),
+      isDinnerService: normalizeBool(day1.isDinnerService) === normalizeBool(day2.isDinnerService),
+      dinnerOpenTime: normalizeTime(day1.dinnerOpenTime) === normalizeTime(day2.dinnerOpenTime),
+      dinnerCloseTime: normalizeTime(day1.dinnerCloseTime) === normalizeTime(day2.dinnerCloseTime)
+    };
+    
+    const isEqual = Object.values(comparisons).every(match => match);
+    
+    if (!isEqual) {
+      console.log(`❌ ${day1.dayOfWeek} ≠ ${day2.dayOfWeek}: Different hours detected`);
+      console.log('Field-by-field comparison:', comparisons);
+      console.log('Detailed values:', {
+        day1: {
+          dayOfWeek: day1.dayOfWeek,
+          isClosed: day1.isClosed,
+          breakfast: { 
+            service: normalizeBool(day1.isBreakfastService), 
+            open: normalizeTime(day1.breakfastOpenTime), 
+            close: normalizeTime(day1.breakfastCloseTime) 
+          },
+          lunch: { 
+            service: normalizeBool(day1.isLunchService), 
+            open: normalizeTime(day1.lunchOpenTime), 
+            close: normalizeTime(day1.lunchCloseTime) 
+          },
+          dinner: { 
+            service: normalizeBool(day1.isDinnerService), 
+            open: normalizeTime(day1.dinnerOpenTime), 
+            close: normalizeTime(day1.dinnerCloseTime) 
+          },
+          updatedAt: day1.updatedAt
+        },
+        day2: {
+          dayOfWeek: day2.dayOfWeek,
+          isClosed: day2.isClosed,
+          breakfast: { 
+            service: normalizeBool(day2.isBreakfastService), 
+            open: normalizeTime(day2.breakfastOpenTime), 
+            close: normalizeTime(day2.breakfastCloseTime) 
+          },
+          lunch: { 
+            service: normalizeBool(day2.isLunchService), 
+            open: normalizeTime(day2.lunchOpenTime), 
+            close: normalizeTime(day2.lunchCloseTime) 
+          },
+          dinner: { 
+            service: normalizeBool(day2.isDinnerService), 
+            open: normalizeTime(day2.dinnerOpenTime), 
+            close: normalizeTime(day2.dinnerCloseTime) 
+          },
+          updatedAt: day2.updatedAt
+        }
+      });
+    } else {
+      console.log(`✅ ${day1.dayOfWeek} = ${day2.dayOfWeek}: Hours match!`);
+    }
+    
+    return isEqual;
   };
 
   const groupConsecutiveDays = () => {
+    console.log('Grouping consecutive days with same hours');
+    
+    if (hours.length === 0) {
+      console.log('No hours data to group');
+      return [];
+    }
+    
+    if (hours.length === 1) {
+      console.log('Only one day of hours, creating single group');
+      return [hours];
+    }
+    
     const groups = [];
     let currentGroup = [hours[0]];
     
     for (let i = 1; i < hours.length; i++) {
-      if (areHoursEqual(hours[i - 1], hours[i])) {
+      const areEqual = areHoursEqual(hours[i - 1], hours[i]);
+      
+      if (areEqual) {
         currentGroup.push(hours[i]);
       } else {
         groups.push(currentGroup);
@@ -92,6 +203,11 @@ export default function RestaurantHoursDisplay() {
       }
     }
     groups.push(currentGroup);
+    
+    console.log('Final groups:', groups.map(group => ({
+      days: group.map(day => day.dayOfWeek).join(' - '),
+      count: group.length
+    })));
     
     return groups;
   };
@@ -129,11 +245,11 @@ export default function RestaurantHoursDisplay() {
     );
   }
 
-  const dayGroups = groupConsecutiveDays();
-
   return (
     <div className="space-y-4">
-      <div className="text-xs tracking-[0.3em] uppercase text-white/60">Hours</div>
+      <div className="flex items-center justify-center">
+        <div className="text-xs tracking-[0.3em] uppercase text-white/60">Hours</div>
+      </div>
       <div className="text-white/80 leading-relaxed text-sm space-y-3">
         {dayGroups.map((group, index) => {
           const services = getServiceHours(group[0]);

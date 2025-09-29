@@ -7,11 +7,30 @@ export class BlobService {
   static async uploadImage(file: File, filename: string): Promise<{ url: string; pathname: string } | null> {
     try {
       if (process.env.NODE_ENV !== 'production') {
-        // In development, return a placeholder URL that mimics the uploaded file
-        console.log('Development mode: Simulating blob upload for', filename);
+        // In development, save files locally to public/uploads
+        console.log('Development mode: Saving file locally for', filename);
+        
+        const fs = await import('fs');
+        const path = await import('path');
+        
+        // Ensure uploads directory exists
+        const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+        if (!fs.existsSync(uploadsDir)) {
+          fs.mkdirSync(uploadsDir, { recursive: true });
+        }
+        
+        // Convert File to Buffer
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        
+        // Save to public/uploads with simplified filename
+        const simplifiedFilename = filename.replace('menu-items/', '');
+        const filePath = path.join(uploadsDir, simplifiedFilename);
+        fs.writeFileSync(filePath, buffer);
+        
         return {
-          url: `/uploads/${filename}`,
-          pathname: `/uploads/${filename}`
+          url: `/uploads/${simplifiedFilename}`,
+          pathname: `/uploads/${simplifiedFilename}`
         };
       }
 

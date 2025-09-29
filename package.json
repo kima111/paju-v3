@@ -3,14 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "dev": "next dev",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
     "@vercel/blob": "^2.0.0",
     "@vercel/postgres": "^0.10.0",
+    "autoprefixer": "^10.4.21",
     "bcryptjs": "^3.0.2",
     "jose": "^6.1.0",
     "jsonwebtoken": "^9.0.2",
@@ -20,7 +21,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
-    "@tailwindcss/postcss": "^4",
+    "@tailwindcss/postcss": "^4.1.13",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
