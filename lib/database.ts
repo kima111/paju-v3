@@ -457,11 +457,16 @@ export const db = {
   },
   
   deleteMenuItem: (id: string) => {
+    console.log('DevDB deleteMenuItem called with ID:', id);
+    console.log('Current menuItems IDs:', menuItems.map(item => item.id));
     const index = menuItems.findIndex(item => item.id === id);
+    console.log('Found index:', index);
     if (index !== -1) {
       const deleted = menuItems.splice(index, 1)[0];
+      console.log('Deleted item:', deleted);
       return deleted;
     }
+    console.log('No item found with ID:', id);
     return null;
   },
 

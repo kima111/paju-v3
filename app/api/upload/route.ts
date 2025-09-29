@@ -13,6 +13,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!(file instanceof File)) {
+      return NextResponse.json(
+        { error: 'Invalid file format' },
+        { status: 400 }
+      );
+    }
+
     // Validate the file
     const validation = BlobService.validateImageFile(file);
     if (!validation.valid) {
