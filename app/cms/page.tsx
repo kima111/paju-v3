@@ -84,90 +84,70 @@ export default function CMSPage() {
 
   if (!isAuthenticated) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ maxWidth: '400px', width: '100%', backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', padding: '24px' }}>
-          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-            <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827', margin: '0 0 8px 0' }}>PAJU CMS</h1>
-            <p style={{ color: '#6b7280', margin: 0 }}>Content Management System</p>
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="max-w-md w-full mx-auto p-6">
+          <div className="text-center mb-12">
+            <h1 className="font-display text-4xl font-light tracking-tight mb-4">
+              PAJU CMS
+            </h1>
+            <div className="w-16 h-px bg-white/30 mx-auto"></div>
           </div>
 
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <form onSubmit={handleLogin} className="space-y-6">
+            {loginError && (
+              <div className="bg-red-900/20 border border-red-600/30 text-red-400 px-4 py-3 rounded text-sm">
+                {loginError}
+              </div>
+            )}
+
             <div>
-              <label htmlFor="username" style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+              <label htmlFor="username" className="block text-xs tracking-wider uppercase text-white/60 mb-2">
                 Username
               </label>
               <input
-                type="text"
                 id="username"
+                type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  color: '#111827',
-                  backgroundColor: 'white',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
                 required
                 autoComplete="username"
+                className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 focus:border-white/30 focus:outline-none text-white"
               />
             </div>
 
             <div>
-              <label htmlFor="password" style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+              <label htmlFor="password" className="block text-xs tracking-wider uppercase text-white/60 mb-2">
                 Password
               </label>
               <input
-                type="password"
                 id="password"
+                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  color: '#111827',
-                  backgroundColor: 'white',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
                 required
                 autoComplete="current-password"
+                className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 focus:border-white/30 focus:outline-none text-white"
               />
             </div>
 
-            {loginError && (
-              <div style={{ color: '#dc2626', fontSize: '14px' }}>{loginError}</div>
-            )}
-
             <button
               type="submit"
-              style={{
-                width: '100%',
-                backgroundColor: '#2563eb',
-                color: 'white',
-                padding: '10px 16px',
-                borderRadius: '6px',
-                border: 'none',
-                fontSize: '14px',
-                fontWeight: '500',
-                cursor: 'pointer'
-              }}
+              className="w-full bg-white text-black py-3 px-4 text-xs tracking-wider uppercase transition-all duration-300 hover:bg-white/90"
             >
               Login
             </button>
           </form>
 
-          <div style={{ marginTop: '24px', textAlign: 'center' }}>
+          <div className="mt-8 text-center">
+            <p className="text-xs text-white/40">
+              Default credentials: admin / admin123
+            </p>
+          </div>
+
+          <div className="mt-8 text-center">
             <Link
               href="/"
-              style={{ fontSize: '14px', color: '#6b7280', textDecoration: 'none' }}
+              className="text-xs text-white/40 hover:text-white/60 transition-colors"
             >
               ← Back to website
             </Link>
