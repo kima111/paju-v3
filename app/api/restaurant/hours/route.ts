@@ -1,41 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '../../../../lib/database';
-import { verifyJWT } from '../../../../lib/auth';
+import { DatabaseService } from '../../../../lib/database-service';
 
 export async function GET() {
-  const hours = db.getRestaurantHours();
-  return NextResponse.json(hours);
+  try {
+    const hours = await DatabaseService.getRestaurantHours();
+    return NextResponse.json(hours);
+  } catch (error) {
+    console.error('Error fetching restaurant hours:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
 }
 
 export async function PUT(request: NextRequest) {
   try {
-    // Check authentication
-    const token = request.cookies.get('auth-token')?.value;
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const payload = await verifyJWT(token);
-    if (!payload) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
     const body = await request.json();
     const { dayId, ...updates } = body;
 
-    if (!dayId) {
-      return NextResponse.json({ error: 'Day ID is required' }, { status: 400 });
+    const updatedHours = await DatabaseService.updateRestaurantHours(dayId, updates);
+
+    if (!updatedHours) {
+      return NextResponse.json(
+        { error: 'Failed to update restaurant hours' },
+        { status: 500 }
+      );
     }
 
-    const updatedHour = db.updateRestaurantHours(dayId, updates);
-
-    if (!updatedHour) {
-      return NextResponse.json({ error: 'Restaurant hours not found' }, { status: 404 });
-    }
-
-    return NextResponse.json(updatedHour);
+    return NextResponse.json(updatedHours);
   } catch (error) {
     console.error('Error updating restaurant hours:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }

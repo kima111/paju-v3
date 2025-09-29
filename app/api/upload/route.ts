@@ -1,72 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyJWT } from '../../../lib/auth';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
+import { BlobService } from '../../../lib/blob-service';
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify authentication
-    const token = request.cookies.get('auth-token')?.value;
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const payload = await verifyJWT(token);
-    if (!payload) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const formData = await request.formData();
-    const image = formData.get('image') as File;
+    const file = formData.get('file') as File;
 
-    console.log('Upload request received:', {
-      hasImage: !!image,
-      imageSize: image?.size,
-      imageType: image?.type,
-      imageName: image?.name
+    if (!file) {
+      return NextResponse.json(
+        { error: 'No file provided' },
+        { status: 400 }
+      );
+    }
+
+    // Validate the file
+    const validation = BlobService.validateImageFile(file);
+    if (!validation.valid) {
+      return NextResponse.json(
+        { error: validation.error },
+        { status: 400 }
+      );
+    }
+
+    // Generate a unique filename
+    const filename = BlobService.generateFilename(file.name);
+
+    // Upload to blob storage
+    const result = await BlobService.uploadImage(file, filename);
+    
+    if (!result) {
+      return NextResponse.json(
+        { error: 'Failed to upload image' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      url: result.url,
+      filename: filename
     });
 
-    if (!image) {
-      console.log('No image provided in form data');
-      return NextResponse.json({ error: 'No image provided' }, { status: 400 });
-    }
-
-    // Check file size (5MB limit)
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (image.size > maxSize) {
-      return NextResponse.json({ error: 'File size too large. Maximum 5MB allowed.' }, { status: 400 });
-    }
-
-    // Check file type
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-    if (!allowedTypes.includes(image.type)) {
-      return NextResponse.json({ error: 'Invalid file type. Only JPEG and PNG are allowed.' }, { status: 400 });
-    }
-
-    // Create unique filename
-    const timestamp = Date.now();
-    const fileExtension = image.name.split('.').pop();
-    const filename = `menu-${timestamp}.${fileExtension}`;
-
-    // Ensure uploads directory exists
-    const uploadsDir = join(process.cwd(), 'public', 'uploads');
-    try {
-      await mkdir(uploadsDir, { recursive: true });
-    } catch {
-      // Directory already exists or was created
-    }
-
-    // Save file
-    const buffer = Buffer.from(await image.arrayBuffer());
-    const filepath = join(uploadsDir, filename);
-    await writeFile(filepath, buffer);
-
-    // Return the URL that can be used to access the image
-    const imageUrl = `/uploads/${filename}`;
-
-    return NextResponse.json({ url: imageUrl }, { status: 201 });
   } catch (error) {
-    console.error('Error uploading image:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('Upload error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
