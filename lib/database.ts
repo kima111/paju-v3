@@ -473,6 +473,16 @@ export const db = {
   // Restaurant Hours
   getRestaurantHours: () => restaurantHours,
   
+  createRestaurantHours: (hoursData: Omit<RestaurantHours, 'id' | 'updatedAt'>) => {
+    const newHours: RestaurantHours = {
+      id: (restaurantHours.length + 1).toString(),
+      ...hoursData,
+      updatedAt: new Date()
+    };
+    restaurantHours.push(newHours);
+    return newHours;
+  },
+  
   updateRestaurantHours: (dayId: string, updates: Partial<Omit<RestaurantHours, 'id' | 'dayOfWeek'>>) => {
     const index = restaurantHours.findIndex(hour => hour.id === dayId);
     if (index !== -1) {
