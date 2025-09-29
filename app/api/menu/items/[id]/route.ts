@@ -1,35 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '../../../../../lib/database';
-import { verifyJWT } from '../../../../../lib/auth';
+import { DatabaseService } from '../../../../../lib/database-service';
+import { BlobService } from '../../../../../lib/blob-service';
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Check authentication
-    const token = request.cookies.get('auth-token')?.value;
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const payload = await verifyJWT(token);
-    if (!payload) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
     const { id } = await params;
     const body = await request.json();
-    const updatedItem = db.updateMenuItem(id, body);
+    
+    const updates = {
+      ...(body.title && { title: body.title }),
+      ...(body.description && { description: body.description }),
+      ...(body.price !== undefined && { price: parseFloat(body.price) }),
+      ...(body.category && { category: body.category }),
+      ...(body.menuType && { menuType: body.menuType }),
+      ...(body.imageUrl !== undefined && { imageUrl: body.imageUrl }),
+      ...(body.isAvailable !== undefined && { isAvailable: body.isAvailable }),
+      updatedAt: new Date()
+    };
 
-    if (!updatedItem) {
-      return NextResponse.json({ error: 'Menu item not found' }, { status: 404 });
+    const menuItem = await DatabaseService.updateMenuItem(id, updates);
+
+    if (!menuItem) {
+      return NextResponse.json(
+        { error: 'Menu item not found' },
+        { status: 404 }
+      );
     }
 
-    return NextResponse.json(updatedItem);
+    return NextResponse.json(menuItem);
   } catch (error) {
     console.error('Error updating menu item:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
 
@@ -38,27 +45,27 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Check authentication
-    const token = request.cookies.get('auth-token')?.value;
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const payload = await verifyJWT(token);
-    if (!payload) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
     const { id } = await params;
-    const deletedItem = db.deleteMenuItem(id);
+    const menuItem = await DatabaseService.deleteMenuItem(id);
 
-    if (!deletedItem) {
-      return NextResponse.json({ error: 'Menu item not found' }, { status: 404 });
+    if (!menuItem) {
+      return NextResponse.json(
+        { error: 'Menu item not found' },
+        { status: 404 }
+      );
+    }
+
+    // Delete associated image if it exists
+    if (menuItem.imageUrl) {
+      await BlobService.deleteImage(menuItem.imageUrl);
     }
 
     return NextResponse.json({ message: 'Menu item deleted successfully' });
   } catch (error) {
     console.error('Error deleting menu item:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
