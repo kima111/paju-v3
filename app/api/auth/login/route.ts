@@ -8,6 +8,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { username, password } = body;
 
+    console.log('Login attempt:', { username, password: password ? '[PROVIDED]' : '[MISSING]' });
+
     if (!username || !password) {
       return NextResponse.json(
         { error: 'Username and password are required' },
@@ -17,6 +19,7 @@ export async function POST(request: NextRequest) {
 
     // Get user from database
     const user = await DatabaseService.getUserByUsername(username);
+    console.log('User found:', user ? { id: user.id, username: user.username, hasPassword: !!user.passwordHash } : 'No user found');
 
     if (!user) {
       return NextResponse.json(
@@ -27,6 +30,7 @@ export async function POST(request: NextRequest) {
 
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.passwordHash);
+    console.log('Password validation result:', isValidPassword);
 
     if (!isValidPassword) {
       return NextResponse.json(
