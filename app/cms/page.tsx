@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import MenuManagement from '../../components/cms/MenuManagement';
 import HoursManagement from '../../components/cms/HoursManagement';
 
@@ -54,7 +55,7 @@ export default function CMSPage() {
         const data = await response.json();
         setLoginError(data.error || 'Login failed');
       }
-    } catch (error) {
+    } catch {
       setLoginError('Network error occurred');
     }
   };
@@ -164,12 +165,12 @@ export default function CMSPage() {
           </form>
 
           <div style={{ marginTop: '24px', textAlign: 'center' }}>
-            <a
+            <Link
               href="/"
               style={{ fontSize: '14px', color: '#6b7280', textDecoration: 'none' }}
             >
               ← Back to website
-            </a>
+            </Link>
           </div>
         </div>
       </div>

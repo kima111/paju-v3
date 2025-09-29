@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import type { MenuItem } from '../lib/database';
 
@@ -14,11 +14,7 @@ export default function DynamicMenu({ menuType, limit }: DynamicMenuProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchMenuItems();
-  }, [menuType]);
-
-  const fetchMenuItems = async () => {
+  const fetchMenuItems = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch('/api/menu/items');
@@ -47,7 +43,11 @@ export default function DynamicMenu({ menuType, limit }: DynamicMenuProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [menuType, limit]);
+
+  useEffect(() => {
+    fetchMenuItems();
+  }, [fetchMenuItems]);
 
   if (loading) {
     return (

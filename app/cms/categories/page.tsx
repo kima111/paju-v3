@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import CategoryForm from '../../../components/cms/CategoryForm';
 
 export default function CategoriesCMSPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -10,12 +9,7 @@ export default function CategoriesCMSPage() {
   const [categories, setCategories] = useState<string[]>([]);
   const router = useRouter();
 
-  useEffect(() => {
-    checkAuth();
-    fetchCategories();
-  }, []);
-
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
     try {
       const response = await fetch('/api/auth/verify', {
         credentials: 'include',
@@ -31,7 +25,7 @@ export default function CategoriesCMSPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [router]);
 
   const fetchCategories = async () => {
     try {
@@ -44,6 +38,11 @@ export default function CategoriesCMSPage() {
       console.error('Error fetching categories:', error);
     }
   };
+
+  useEffect(() => {
+    checkAuth();
+    fetchCategories();
+  }, [checkAuth]);
 
   if (isLoading) {
     return (

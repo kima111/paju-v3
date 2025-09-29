@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { DatabaseService } from '../../../lib/database-service';
 import { verifyJWT } from '../../../lib/auth';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const categories = await DatabaseService.getMenuCategories();
     return NextResponse.json(categories);

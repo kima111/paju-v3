@@ -33,6 +33,39 @@ export default function RestaurantHoursDisplay() {
   useEffect(() => {
     if (hours.length > 0) {
       console.log('Hours data changed, re-grouping...');
+      const groupConsecutiveDays = () => {
+        console.log('Grouping consecutive days with same hours');
+        
+        if (hours.length === 0) {
+          console.log('No hours data to group');
+          return [];
+        }
+
+        const groups: RestaurantHours[][] = [];
+        let currentGroup: RestaurantHours[] = [hours[0]];
+        
+        for (let i = 1; i < hours.length; i++) {
+          const currentHour = hours[i];
+          const lastInGroup = currentGroup[currentGroup.length - 1];
+          
+          if (areHoursEqual(currentHour, lastInGroup)) {
+            currentGroup.push(currentHour);
+          } else {
+            groups.push(currentGroup);
+            currentGroup = [currentHour];
+          }
+        }
+        
+        groups.push(currentGroup);
+        
+        console.log('Groups created:', groups.map(group => ({
+          days: group.map(h => h.dayOfWeek),
+          sample: group[0]
+        })));
+        
+        return groups;
+      };
+      
       const groups = groupConsecutiveDays();
       setDayGroups(groups);
     }
@@ -174,42 +207,6 @@ export default function RestaurantHoursDisplay() {
     }
     
     return isEqual;
-  };
-
-  const groupConsecutiveDays = () => {
-    console.log('Grouping consecutive days with same hours');
-    
-    if (hours.length === 0) {
-      console.log('No hours data to group');
-      return [];
-    }
-    
-    if (hours.length === 1) {
-      console.log('Only one day of hours, creating single group');
-      return [hours];
-    }
-    
-    const groups = [];
-    let currentGroup = [hours[0]];
-    
-    for (let i = 1; i < hours.length; i++) {
-      const areEqual = areHoursEqual(hours[i - 1], hours[i]);
-      
-      if (areEqual) {
-        currentGroup.push(hours[i]);
-      } else {
-        groups.push(currentGroup);
-        currentGroup = [hours[i]];
-      }
-    }
-    groups.push(currentGroup);
-    
-    console.log('Final groups:', groups.map(group => ({
-      days: group.map(day => day.dayOfWeek).join(' - '),
-      count: group.length
-    })));
-    
-    return groups;
   };
 
   const formatGroupName = (group: RestaurantHours[]) => {
