@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS menu_status (
 
 -- Insert default admin user (password: admin123)
 INSERT INTO users (username, password_hash, role) VALUES 
-('admin', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin')
+('admin', '$2b$10$ZQli4KsPF.oReH2gtcvOzu47zW3NZaU/viXHIVS44eA5SDaoXK8xm', 'admin')
 ON CONFLICT (username) DO NOTHING;
 
 -- Insert default menu categories
@@ -89,12 +89,12 @@ INSERT INTO menu_categories (name, menu_type, display_order) VALUES
 ON CONFLICT DO NOTHING;
 
 -- Insert default restaurant hours
-INSERT INTO restaurant_hours (day_of_week, is_closed, is_breakfast_service, is_lunch_service, lunch_open_time, lunch_close_time, is_dinner_service, dinner_open_time, dinner_close_time, open_time, close_time) VALUES 
-('Monday', false, false, true, '11:00', '15:00', true, '17:00', '21:00', '11:00', '21:00'),
-('Tuesday', false, false, true, '11:00', '15:00', true, '17:00', '21:00', '11:00', '21:00'),
-('Wednesday', false, false, true, '11:00', '15:00', true, '17:00', '21:00', '11:00', '21:00'),
-('Thursday', false, false, true, '11:00', '15:00', true, '17:00', '21:00', '11:00', '21:00'),
-('Friday', false, false, true, '11:00', '15:00', true, '17:00', '22:00', '11:00', '22:00'),
+INSERT INTO restaurant_hours (day_of_week, is_closed, is_breakfast_service, breakfast_open_time, breakfast_close_time, is_lunch_service, lunch_open_time, lunch_close_time, is_dinner_service, dinner_open_time, dinner_close_time, open_time, close_time) VALUES 
+('Monday', false, false, null, null, true, '11:00', '15:00', true, '17:00', '21:00', '11:00', '21:00'),
+('Tuesday', false, false, null, null, true, '11:00', '15:00', true, '17:00', '21:00', '11:00', '21:00'),
+('Wednesday', false, false, null, null, true, '11:00', '15:00', true, '17:00', '21:00', '11:00', '21:00'),
+('Thursday', false, false, null, null, true, '11:00', '15:00', true, '17:00', '21:00', '11:00', '21:00'),
+('Friday', false, false, null, null, true, '11:00', '15:00', true, '17:00', '22:00', '11:00', '22:00'),
 ('Saturday', false, true, '08:00', '11:00', true, '11:00', '15:00', true, '17:00', '22:00', '08:00', '22:00'),
 ('Sunday', false, true, '09:00', '12:00', true, '12:00', '15:00', false, null, null, '09:00', '15:00')
 ON CONFLICT (day_of_week) DO NOTHING;

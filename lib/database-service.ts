@@ -314,6 +314,44 @@ export class DatabaseService {
     }
   }
 
+  static async createRestaurantHours(hoursData: Omit<RestaurantHours, 'id' | 'updatedAt'>): Promise<RestaurantHours | null> {
+    if (process.env.NODE_ENV !== 'production' && devDB?.db) {
+      return devDB.db.createRestaurantHours(hoursData);
+    }
+
+    try {
+      const result = await sql`
+        INSERT INTO restaurant_hours (
+          day_of_week, is_closed, 
+          is_breakfast_service, breakfast_open_time, breakfast_close_time,
+          is_lunch_service, lunch_open_time, lunch_close_time,
+          is_dinner_service, dinner_open_time, dinner_close_time
+        ) VALUES (
+          ${hoursData.dayOfWeek}, ${hoursData.isClosed},
+          ${hoursData.isBreakfastService}, ${hoursData.breakfastOpenTime}, ${hoursData.breakfastCloseTime},
+          ${hoursData.isLunchService}, ${hoursData.lunchOpenTime}, ${hoursData.lunchCloseTime},
+          ${hoursData.isDinnerService}, ${hoursData.dinnerOpenTime}, ${hoursData.dinnerCloseTime}
+        )
+        RETURNING id, day_of_week as "dayOfWeek", is_closed as "isClosed",
+                  is_breakfast_service as "isBreakfastService", 
+                  breakfast_open_time as "breakfastOpenTime", 
+                  breakfast_close_time as "breakfastCloseTime",
+                  is_lunch_service as "isLunchService", 
+                  lunch_open_time as "lunchOpenTime", 
+                  lunch_close_time as "lunchCloseTime",
+                  is_dinner_service as "isDinnerService", 
+                  dinner_open_time as "dinnerOpenTime", 
+                  dinner_close_time as "dinnerCloseTime",
+                  updated_at as "updatedAt"
+      `;
+      
+      return result.rows[0] as RestaurantHours;
+    } catch (error) {
+      console.error('Database error:', error);
+      return null;
+    }
+  }
+
   static async updateRestaurantHours(dayId: string, updates: Partial<Omit<RestaurantHours, 'id' | 'dayOfWeek'>>): Promise<RestaurantHours | null> {
     if (process.env.NODE_ENV !== 'production' && devDB?.db) {
       return devDB.db.updateRestaurantHours(dayId, updates);
