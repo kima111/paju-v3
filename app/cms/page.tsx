@@ -54,8 +54,13 @@ export default function CMSPage() {
       });
 
       if (response.ok) {
+        const data = await response.json();
         setIsAuthenticated(true);
-        router.refresh();
+        setUserRole(data.user?.role || 'editor');
+        // Clear login form
+        setUsername('');
+        setPassword('');
+        setLoginError('');
       } else {
         const data = await response.json();
         setLoginError(data.error || 'Login failed');
@@ -72,8 +77,10 @@ export default function CMSPage() {
         credentials: 'include',
       });
       setIsAuthenticated(false);
+      setUserRole(null);
       setUsername('');
       setPassword('');
+      setLoginError('');
     } catch (error) {
       console.error('Logout failed:', error);
     }
