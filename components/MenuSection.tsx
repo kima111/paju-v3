@@ -20,10 +20,15 @@ export default function MenuSection() {
       const response = await fetch('/api/menu/enabled');
       if (response.ok) {
         const menus = await response.json();
-        setEnabledMenus(menus);
+        // Sort menus in logical order: breakfast, lunch, dinner
+        const menuOrder = ['breakfast', 'lunch', 'dinner'];
+        const sortedMenus = menus.sort((a: string, b: string) => {
+          return menuOrder.indexOf(a) - menuOrder.indexOf(b);
+        });
+        setEnabledMenus(sortedMenus);
         // Set active menu to the first enabled menu, or dinner as fallback
-        if (menus.length > 0) {
-          setActiveMenu(menus.includes('dinner') ? 'dinner' : menus[0]);
+        if (sortedMenus.length > 0) {
+          setActiveMenu(sortedMenus.includes('dinner') ? 'dinner' : sortedMenus[0]);
         }
       }
     } catch (error) {
@@ -95,7 +100,12 @@ export default function MenuSection() {
           {/* Menu Type Selector - Only show enabled menus */}
           {enabledMenus.length > 1 && (
             <div className="flex justify-center space-x-8 mb-16">
-              {enabledMenus.map(menuType => (
+              {enabledMenus
+                .sort((a, b) => {
+                  const menuOrder = ['breakfast', 'lunch', 'dinner'];
+                  return menuOrder.indexOf(a) - menuOrder.indexOf(b);
+                })
+                .map(menuType => (
                 <button
                   key={menuType}
                   onClick={() => setActiveMenu(menuType)}
