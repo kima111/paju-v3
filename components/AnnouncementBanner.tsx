@@ -47,7 +47,6 @@ export default function AnnouncementBanner() {
       const response = await fetch('/api/announcements?active=true');
       if (response.ok) {
         const data = await response.json();
-        console.log('Fetched announcements:', data); // Debug log
         setAnnouncements(data);
       } else {
         console.error('Failed to fetch announcements:', response.status, response.statusText);
@@ -69,7 +68,6 @@ export default function AnnouncementBanner() {
   }
 
   if (!isVisible || announcements.length === 0) {
-    console.log('Banner not visible:', { isVisible, announcementsCount: announcements.length }); // Debug log
     return null;
   }
 

@@ -32,12 +32,8 @@ export default function RestaurantHoursDisplay() {
   // Re-group whenever hours data changes
   useEffect(() => {
     if (hours.length > 0) {
-      console.log('Hours data changed, re-grouping...');
       const groupConsecutiveDays = () => {
-        console.log('Grouping consecutive days with same hours');
-        
         if (hours.length === 0) {
-          console.log('No hours data to group');
           return [];
         }
 
@@ -57,12 +53,6 @@ export default function RestaurantHoursDisplay() {
         }
         
         groups.push(currentGroup);
-        
-        console.log('Groups created:', groups.map(group => ({
-          days: group.map(h => h.dayOfWeek),
-          sample: group[0]
-        })));
-        
         return groups;
       };
       
@@ -73,7 +63,6 @@ export default function RestaurantHoursDisplay() {
 
   const fetchHours = async () => {
     try {
-      console.log('Fetching restaurant hours...');
       // Add cache-busting parameter to ensure fresh data
       const response = await fetch(`/api/restaurant/hours?t=${Date.now()}`, {
         headers: {
@@ -83,7 +72,6 @@ export default function RestaurantHoursDisplay() {
       });
       if (response.ok) {
         const data = await response.json();
-        console.log('Raw fetched hours data:', JSON.stringify(data, null, 2));
         setHours(data);
       }
     } catch (error) {
@@ -156,56 +144,6 @@ export default function RestaurantHoursDisplay() {
     };
     
     const isEqual = Object.values(comparisons).every(match => match);
-    
-    if (!isEqual) {
-      console.log(`❌ ${day1.dayOfWeek} ≠ ${day2.dayOfWeek}: Different hours detected`);
-      console.log('Field-by-field comparison:', comparisons);
-      console.log('Detailed values:', {
-        day1: {
-          dayOfWeek: day1.dayOfWeek,
-          isClosed: day1.isClosed,
-          breakfast: { 
-            service: normalizeBool(day1.isBreakfastService), 
-            open: normalizeTime(day1.breakfastOpenTime), 
-            close: normalizeTime(day1.breakfastCloseTime) 
-          },
-          lunch: { 
-            service: normalizeBool(day1.isLunchService), 
-            open: normalizeTime(day1.lunchOpenTime), 
-            close: normalizeTime(day1.lunchCloseTime) 
-          },
-          dinner: { 
-            service: normalizeBool(day1.isDinnerService), 
-            open: normalizeTime(day1.dinnerOpenTime), 
-            close: normalizeTime(day1.dinnerCloseTime) 
-          },
-          updatedAt: day1.updatedAt
-        },
-        day2: {
-          dayOfWeek: day2.dayOfWeek,
-          isClosed: day2.isClosed,
-          breakfast: { 
-            service: normalizeBool(day2.isBreakfastService), 
-            open: normalizeTime(day2.breakfastOpenTime), 
-            close: normalizeTime(day2.breakfastCloseTime) 
-          },
-          lunch: { 
-            service: normalizeBool(day2.isLunchService), 
-            open: normalizeTime(day2.lunchOpenTime), 
-            close: normalizeTime(day2.lunchCloseTime) 
-          },
-          dinner: { 
-            service: normalizeBool(day2.isDinnerService), 
-            open: normalizeTime(day2.dinnerOpenTime), 
-            close: normalizeTime(day2.dinnerCloseTime) 
-          },
-          updatedAt: day2.updatedAt
-        }
-      });
-    } else {
-      console.log(`✅ ${day1.dayOfWeek} = ${day2.dayOfWeek}: Hours match!`);
-    }
-    
     return isEqual;
   };
 
