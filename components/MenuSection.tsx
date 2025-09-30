@@ -68,7 +68,19 @@ export default function MenuSection() {
 
   // If no menus are enabled, don't show the menu section
   if (enabledMenus.length === 0) {
-    return null;
+    return (
+      <section id="menu" className="py-32 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-24">
+            <div className="text-xs tracking-[0.3em] uppercase text-white/60 mb-6">Our Menu</div>
+            <h2 className="font-display text-4xl md:text-5xl font-light">
+              Menu Currently Unavailable
+            </h2>
+            <p className="text-white/40 mt-4">No menus are currently enabled. Please check back later.</p>
+          </div>
+        </div>
+      </section>
+    );
   }
 
   return (
