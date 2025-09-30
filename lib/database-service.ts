@@ -24,30 +24,141 @@ let devDB: {
   getMenuStatuses?: () => MenuStatus[];
   updateMenuStatus?: (menuType: 'breakfast' | 'lunch' | 'dinner', isEnabled: boolean) => MenuStatus[];
 } | null = null;
-if (process.env.NODE_ENV !== 'production') {
-  import('./database').then((db) => {
-    devDB = {
-      db: db.db,
-      getMenuStatuses: db.getMenuStatuses,
-      updateMenuStatus: db.updateMenuStatus
-    };
-  }).catch(() => {
-    console.warn('Could not load development database');
-  });
+
+// Initialize development database synchronously
+function initDevDB() {
+  if (process.env.NODE_ENV !== 'production' && !devDB) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const db = require('./database');
+      devDB = {
+        db: db.db,
+        getMenuStatuses: db.getMenuStatuses,
+        updateMenuStatus: db.updateMenuStatus
+      };
+      console.log('Development database initialized successfully');
+    } catch (error) {
+      console.warn('Could not load development database:', error);
+    }
+  }
+  return devDB;
 }
 
 // Production Database Operations
 export class DatabaseService {
   // Users
   static async getUserByUsername(username: string): Promise<User | null> {
-    if (process.env.NODE_ENV !== 'production' && devDB?.db) {
-      return devDB.db.getUser(username);
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.getUser(username);
     }
     
     try {
       const result = await sql`
-        SELECT id, username, password_hash as "passwordHash", role, created_at as "createdAt"
+        SELECT id, username, password_hash as "passwordHash", role, is_active as "isActive",
+               created_at as "createdAt", updated_at as "updatedAt"
         FROM users WHERE username = ${username}
+      `;
+      return result.rows[0] as User || null;
+    } catch (error) {
+      console.error('Database error:', error);
+      return null;
+    }
+  }
+
+  static async getUsers(): Promise<User[]> {
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.getUsers();
+    }
+
+    try {
+      const result = await sql`
+        SELECT id, username, role, is_active as "isActive", 
+               created_at as "createdAt", updated_at as "updatedAt"
+        FROM users ORDER BY created_at DESC
+      `;
+      return result.rows as User[];
+    } catch (error) {
+      console.error('Database error:', error);
+      return [];
+    }
+  }
+
+  static async createUser(userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<User | null> {
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.createUser(userData);
+    }
+
+    try {
+      const result = await sql`
+        INSERT INTO users (username, password_hash, role, is_active)
+        VALUES (${userData.username}, ${userData.passwordHash}, ${userData.role}, ${userData.isActive})
+        RETURNING id, username, role, is_active as "isActive", 
+                  created_at as "createdAt", updated_at as "updatedAt"
+      `;
+      return result.rows[0] as User;
+    } catch (error) {
+      console.error('Database error:', error);
+      return null;
+    }
+  }
+
+  static async updateUser(id: string, updates: Partial<Omit<User, 'id' | 'createdAt'>>): Promise<User | null> {
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.updateUser(id, updates);
+    }
+
+    try {
+      // Build dynamic query based on provided updates
+      let query = 'UPDATE users SET updated_at = NOW()';
+      const params: (string | boolean)[] = [id];
+      let paramIndex = 2;
+
+      if (updates.username !== undefined) {
+        query += `, username = $${paramIndex}`;
+        params.push(updates.username);
+        paramIndex++;
+      }
+      if (updates.passwordHash !== undefined) {
+        query += `, password_hash = $${paramIndex}`;
+        params.push(updates.passwordHash);
+        paramIndex++;
+      }
+      if (updates.role !== undefined) {
+        query += `, role = $${paramIndex}`;
+        params.push(updates.role);
+        paramIndex++;
+      }
+      if (updates.isActive !== undefined) {
+        query += `, is_active = $${paramIndex}`;
+        params.push(updates.isActive);
+        paramIndex++;
+      }
+
+      query += ' WHERE id = $1 RETURNING id, username, role, is_active as "isActive", created_at as "createdAt", updated_at as "updatedAt"';
+
+      const result = await sql.query(query, params);
+      return result.rows[0] as User || null;
+    } catch (error) {
+      console.error('Database error:', error);
+      return null;
+    }
+  }
+
+  static async deleteUser(id: string): Promise<User | null> {
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.deleteUser(id);
+    }
+
+    try {
+      const result = await sql`
+        DELETE FROM users WHERE id = ${id}
+        RETURNING id, username, role, is_active as "isActive", 
+                  created_at as "createdAt", updated_at as "updatedAt"
       `;
       return result.rows[0] as User || null;
     } catch (error) {
@@ -58,8 +169,9 @@ export class DatabaseService {
 
   // Menu Items
   static async getMenuItems(menuType?: 'breakfast' | 'lunch' | 'dinner'): Promise<MenuItem[]> {
-    if (process.env.NODE_ENV !== 'production' && devDB?.db) {
-      return devDB.db.getMenuItems(menuType);
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.getMenuItems(menuType);
     }
 
     try {
@@ -87,8 +199,9 @@ export class DatabaseService {
   }
 
   static async createMenuItem(item: Omit<MenuItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<MenuItem | null> {
-    if (process.env.NODE_ENV !== 'production' && devDB?.db) {
-      return devDB.db.createMenuItem(item);
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.createMenuItem(item);
     }
 
     try {
@@ -118,8 +231,9 @@ export class DatabaseService {
   }
 
   static async updateMenuItem(id: string, updates: Partial<Omit<MenuItem, 'id' | 'createdAt'>>): Promise<MenuItem | null> {
-    if (process.env.NODE_ENV !== 'production' && devDB?.db) {
-      return devDB.db.updateMenuItem(id, updates);
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.updateMenuItem(id, updates);
     }
 
     try {
@@ -159,9 +273,10 @@ export class DatabaseService {
   }
 
   static async deleteMenuItem(id: string): Promise<MenuItem | null> {
-    if (process.env.NODE_ENV !== 'production' && devDB?.db) {
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
       console.log('Using devDB for delete, ID:', id);
-      const result = devDB.db.deleteMenuItem(id);
+      const result = devDatabase.db.deleteMenuItem(id);
       console.log('DevDB delete result:', result);
       return result;
     }
@@ -195,8 +310,9 @@ export class DatabaseService {
 
   // Menu Categories
   static async getMenuCategories(menuType?: 'breakfast' | 'lunch' | 'dinner'): Promise<MenuCategory[]> {
-    if (process.env.NODE_ENV !== 'production' && devDB?.db) {
-      return devDB.db.getMenuCategories(menuType);
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.getMenuCategories(menuType);
     }
 
     try {
@@ -219,8 +335,9 @@ export class DatabaseService {
   }
 
   static async createMenuCategory(category: Omit<MenuCategory, 'id' | 'createdAt'>): Promise<MenuCategory | null> {
-    if (process.env.NODE_ENV !== 'production' && devDB?.db) {
-      return devDB.db.createMenuCategory(category);
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.createMenuCategory(category);
     }
 
     try {
@@ -245,8 +362,9 @@ export class DatabaseService {
   }
 
   static async deleteMenuCategory(id: string): Promise<MenuCategory | null> {
-    if (process.env.NODE_ENV !== 'production' && devDB?.db) {
-      return devDB.db.deleteMenuCategory(id);
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.deleteMenuCategory(id);
     }
 
     try {
@@ -273,8 +391,9 @@ export class DatabaseService {
 
   // Restaurant Hours
   static async getRestaurantHours(): Promise<RestaurantHours[]> {
-    if (process.env.NODE_ENV !== 'production' && devDB?.db) {
-      return devDB.db.getRestaurantHours();
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.getRestaurantHours();
     }
 
     try {
@@ -315,8 +434,9 @@ export class DatabaseService {
   }
 
   static async createRestaurantHours(hoursData: Omit<RestaurantHours, 'id' | 'updatedAt'>): Promise<RestaurantHours | null> {
-    if (process.env.NODE_ENV !== 'production' && devDB?.db) {
-      return devDB.db.createRestaurantHours(hoursData);
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.createRestaurantHours(hoursData);
     }
 
     try {
@@ -353,8 +473,9 @@ export class DatabaseService {
   }
 
   static async updateRestaurantHours(dayId: string, updates: Partial<Omit<RestaurantHours, 'id' | 'dayOfWeek'>>): Promise<RestaurantHours | null> {
-    if (process.env.NODE_ENV !== 'production' && devDB?.db) {
-      return devDB.db.updateRestaurantHours(dayId, updates);
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.updateRestaurantHours(dayId, updates);
     }
 
     try {
@@ -405,8 +526,9 @@ export class DatabaseService {
 
   // Menu Status
   static async getMenuStatuses(): Promise<MenuStatus[]> {
-    if (process.env.NODE_ENV !== 'production' && devDB?.getMenuStatuses) {
-      return devDB.getMenuStatuses();
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.getMenuStatuses) {
+      return devDatabase.getMenuStatuses();
     }
 
     try {
@@ -424,8 +546,9 @@ export class DatabaseService {
   }
 
   static async updateMenuStatus(menuType: 'breakfast' | 'lunch' | 'dinner', isEnabled: boolean): Promise<MenuStatus[]> {
-    if (process.env.NODE_ENV !== 'production' && devDB?.updateMenuStatus) {
-      return devDB.updateMenuStatus(menuType, isEnabled);
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.updateMenuStatus) {
+      return devDatabase.updateMenuStatus(menuType, isEnabled);
     }
 
     try {
