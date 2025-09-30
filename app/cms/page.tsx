@@ -6,6 +6,7 @@ import Link from 'next/link';
 import MenuManagement from '../../components/cms/MenuManagement';
 import HoursManagement from '../../components/cms/HoursManagement';
 import UserManagement from '../../components/cms/UserManagement';
+import AnnouncementManagement from '../../components/cms/AnnouncementManagement';
 
 export default function CMSPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -208,6 +209,16 @@ export default function CMSPage() {
             >
               Restaurant Hours
             </button>
+            <button
+              onClick={() => setActiveTab('announcements')}
+              className={`py-4 text-xs tracking-wider uppercase border-b-2 transition-colors ${
+                activeTab === 'announcements'
+                  ? 'border-white text-white'
+                  : 'border-transparent text-white/60 hover:text-white'
+              }`}
+            >
+              Announcements
+            </button>
             {userRole === 'admin' && (
               <button
                 onClick={() => setActiveTab('users')}
@@ -228,6 +239,7 @@ export default function CMSPage() {
       <main className="max-w-7xl mx-auto px-6 py-8">
         {activeTab === 'menu' && <MenuManagement />}
         {activeTab === 'hours' && <HoursManagement />}
+        {activeTab === 'announcements' && <AnnouncementManagement />}
         {activeTab === 'users' && userRole === 'admin' && <UserManagement />}
       </main>
     </div>
