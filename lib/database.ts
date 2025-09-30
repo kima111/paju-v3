@@ -59,6 +59,18 @@ export interface User {
   updatedAt: Date;
 }
 
+export interface Announcement {
+  id: string;
+  title: string;
+  message: string;
+  isActive: boolean;
+  priority: 'low' | 'medium' | 'high';
+  startDate?: Date;
+  endDate?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // In-memory storage (replace with actual database in production)
 const menuItems: MenuItem[] = [
   // Sample Lunch Menu
@@ -429,6 +441,9 @@ const users: User[] = [
   }
 ];
 
+// Announcements storage
+const announcements: Announcement[] = [];
+
 // Database operations
 export const db = {
   // Menu Items
@@ -533,6 +548,62 @@ export const db = {
     const index = users.findIndex(user => user.id === id);
     if (index !== -1) {
       const deleted = users.splice(index, 1)[0];
+      return deleted;
+    }
+    return null;
+  },
+
+  // Announcements
+  getAnnouncements: () => {
+    return announcements.sort((a, b) => {
+      if (a.priority !== b.priority) {
+        const priorityOrder = { high: 3, medium: 2, low: 1 };
+        return priorityOrder[b.priority] - priorityOrder[a.priority];
+      }
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  },
+
+  getActiveAnnouncements: () => {
+    const now = new Date();
+    return announcements.filter(announcement => {
+      if (!announcement.isActive) return false;
+      if (announcement.startDate && new Date(announcement.startDate) > now) return false;
+      if (announcement.endDate && new Date(announcement.endDate) < now) return false;
+      return true;
+    }).sort((a, b) => {
+      if (a.priority !== b.priority) {
+        const priorityOrder = { high: 3, medium: 2, low: 1 };
+        return priorityOrder[b.priority] - priorityOrder[a.priority];
+      }
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  },
+
+  createAnnouncement: (announcementData: Omit<Announcement, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const newAnnouncement: Announcement = {
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      ...announcementData,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    announcements.push(newAnnouncement);
+    return newAnnouncement;
+  },
+
+  updateAnnouncement: (id: string, updates: Partial<Omit<Announcement, 'id' | 'createdAt'>>) => {
+    const index = announcements.findIndex(announcement => announcement.id === id);
+    if (index !== -1) {
+      announcements[index] = { ...announcements[index], ...updates, updatedAt: new Date() };
+      return announcements[index];
+    }
+    return null;
+  },
+
+  deleteAnnouncement: (id: string) => {
+    const index = announcements.findIndex(announcement => announcement.id === id);
+    if (index !== -1) {
+      const deleted = announcements.splice(index, 1)[0];
       return deleted;
     }
     return null;

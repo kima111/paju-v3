@@ -3,6 +3,8 @@
 import { useState } from "react";
 import MenuSection from "../components/MenuSection";
 import RestaurantHoursDisplay from "../components/RestaurantHoursDisplay";
+import AnnouncementBanner from "../components/AnnouncementBanner";
+import AnnouncementSpacer from "../components/AnnouncementSpacer";
 import Image from "next/image";
 
 export default function Home() {
@@ -49,6 +51,12 @@ export default function Home() {
           </div>
         </div>
       </nav>
+
+      {/* Announcement Banner */}
+      <AnnouncementBanner />
+
+      {/* Spacer for fixed banner */}
+      <AnnouncementSpacer />
 
       {/* Hero Section - Clean minimal design with icon */}
       <section id="home" className="relative h-screen flex items-center justify-center bg-black">

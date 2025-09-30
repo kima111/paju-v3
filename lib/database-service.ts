@@ -1,5 +1,5 @@
 import { sql } from '@vercel/postgres';
-import type { MenuItem, MenuCategory, RestaurantHours, MenuStatus, User } from './database';
+import type { MenuItem, MenuCategory, RestaurantHours, MenuStatus, User, Announcement } from './database';
 
 // Configure database connection for Neon
 if (process.env.NODE_ENV === 'production') {
@@ -161,6 +161,159 @@ export class DatabaseService {
                   created_at as "createdAt", updated_at as "updatedAt"
       `;
       return result.rows[0] as User || null;
+    } catch (error) {
+      console.error('Database error:', error);
+      return null;
+    }
+  }
+
+  // Announcements
+  static async getAnnouncements(): Promise<Announcement[]> {
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.getAnnouncements();
+    }
+
+    try {
+      const result = await sql`
+        SELECT id, title, message, is_active as "isActive", priority,
+               start_date as "startDate", end_date as "endDate",
+               created_at as "createdAt", updated_at as "updatedAt"
+        FROM announcements 
+        ORDER BY 
+          CASE priority 
+            WHEN 'high' THEN 3 
+            WHEN 'medium' THEN 2 
+            WHEN 'low' THEN 1 
+          END DESC,
+          created_at DESC
+      `;
+      return result.rows as Announcement[];
+    } catch (error) {
+      console.error('Database error:', error);
+      return [];
+    }
+  }
+
+  static async getActiveAnnouncements(): Promise<Announcement[]> {
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.getActiveAnnouncements();
+    }
+
+    try {
+      const result = await sql`
+        SELECT id, title, message, is_active as "isActive", priority,
+               start_date as "startDate", end_date as "endDate",
+               created_at as "createdAt", updated_at as "updatedAt"
+        FROM announcements 
+        WHERE is_active = true
+          AND (start_date IS NULL OR start_date <= NOW())
+          AND (end_date IS NULL OR end_date >= NOW())
+        ORDER BY 
+          CASE priority 
+            WHEN 'high' THEN 3 
+            WHEN 'medium' THEN 2 
+            WHEN 'low' THEN 1 
+          END DESC,
+          created_at DESC
+      `;
+      return result.rows as Announcement[];
+    } catch (error) {
+      console.error('Database error:', error);
+      return [];
+    }
+  }
+
+  static async createAnnouncement(announcementData: Omit<Announcement, 'id' | 'createdAt' | 'updatedAt'>): Promise<Announcement | null> {
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.createAnnouncement(announcementData);
+    }
+
+    try {
+      const result = await sql`
+        INSERT INTO announcements (title, message, is_active, priority, start_date, end_date)
+        VALUES (${announcementData.title}, ${announcementData.message}, ${announcementData.isActive}, 
+                ${announcementData.priority}, ${announcementData.startDate?.toISOString() || null}, ${announcementData.endDate?.toISOString() || null})
+        RETURNING id, title, message, is_active as "isActive", priority,
+                  start_date as "startDate", end_date as "endDate",
+                  created_at as "createdAt", updated_at as "updatedAt"
+      `;
+      return result.rows[0] as Announcement;
+    } catch (error) {
+      console.error('Database error:', error);
+      return null;
+    }
+  }
+
+  static async updateAnnouncement(id: string, updates: Partial<Omit<Announcement, 'id' | 'createdAt'>>): Promise<Announcement | null> {
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.updateAnnouncement(id, updates);
+    }
+
+    try {
+      // Build dynamic query based on provided updates
+      let query = 'UPDATE announcements SET updated_at = NOW()';
+      const params: (string | boolean | Date | null)[] = [id];
+      let paramIndex = 2;
+
+      if (updates.title !== undefined) {
+        query += `, title = $${paramIndex}`;
+        params.push(updates.title);
+        paramIndex++;
+      }
+      if (updates.message !== undefined) {
+        query += `, message = $${paramIndex}`;
+        params.push(updates.message);
+        paramIndex++;
+      }
+      if (updates.isActive !== undefined) {
+        query += `, is_active = $${paramIndex}`;
+        params.push(updates.isActive);
+        paramIndex++;
+      }
+      if (updates.priority !== undefined) {
+        query += `, priority = $${paramIndex}`;
+        params.push(updates.priority);
+        paramIndex++;
+      }
+      if (updates.startDate !== undefined) {
+        query += `, start_date = $${paramIndex}`;
+        params.push(updates.startDate);
+        paramIndex++;
+      }
+      if (updates.endDate !== undefined) {
+        query += `, end_date = $${paramIndex}`;
+        params.push(updates.endDate);
+        paramIndex++;
+      }
+
+      query += ' WHERE id = $1 RETURNING id, title, message, is_active as "isActive", priority, start_date as "startDate", end_date as "endDate", created_at as "createdAt", updated_at as "updatedAt"';
+
+      const result = await sql.query(query, params);
+      return result.rows[0] as Announcement || null;
+    } catch (error) {
+      console.error('Database error:', error);
+      return null;
+    }
+  }
+
+  static async deleteAnnouncement(id: string): Promise<Announcement | null> {
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.deleteAnnouncement(id);
+    }
+
+    try {
+      const result = await sql`
+        DELETE FROM announcements WHERE id = ${id}
+        RETURNING id, title, message, is_active as "isActive", priority,
+                  start_date as "startDate", end_date as "endDate",
+                  created_at as "createdAt", updated_at as "updatedAt"
+      `;
+      return result.rows[0] as Announcement || null;
     } catch (error) {
       console.error('Database error:', error);
       return null;
