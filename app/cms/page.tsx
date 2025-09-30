@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import MenuManagement from '../../components/cms/MenuManagement';
 import HoursManagement from '../../components/cms/HoursManagement';
+import UserManagement from '../../components/cms/UserManagement';
 
 export default function CMSPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -13,6 +14,7 @@ export default function CMSPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+  const [userRole, setUserRole] = useState<'admin' | 'editor' | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -25,7 +27,9 @@ export default function CMSPage() {
         credentials: 'include',
       });
       if (response.ok) {
+        const data = await response.json();
         setIsAuthenticated(true);
+        setUserRole(data.user?.role || 'editor');
       }
     } catch (error) {
       console.error('Auth check failed:', error);
@@ -139,12 +143,6 @@ export default function CMSPage() {
           </form>
 
           <div className="mt-8 text-center">
-            <p className="text-xs text-white/40">
-              Default credentials: admin / admin123
-            </p>
-          </div>
-
-          <div className="mt-8 text-center">
             <Link
               href="/"
               className="text-xs text-white/40 hover:text-white/60 transition-colors"
@@ -210,6 +208,18 @@ export default function CMSPage() {
             >
               Restaurant Hours
             </button>
+            {userRole === 'admin' && (
+              <button
+                onClick={() => setActiveTab('users')}
+                className={`py-4 text-xs tracking-wider uppercase border-b-2 transition-colors ${
+                  activeTab === 'users'
+                    ? 'border-white text-white'
+                    : 'border-transparent text-white/60 hover:text-white'
+                }`}
+              >
+                User Management
+              </button>
+            )}
           </div>
         </div>
       </nav>
@@ -218,6 +228,7 @@ export default function CMSPage() {
       <main className="max-w-7xl mx-auto px-6 py-8">
         {activeTab === 'menu' && <MenuManagement />}
         {activeTab === 'hours' && <HoursManagement />}
+        {activeTab === 'users' && userRole === 'admin' && <UserManagement />}
       </main>
     </div>
   );

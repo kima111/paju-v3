@@ -53,8 +53,10 @@ export interface User {
   id: string;
   username: string;
   passwordHash: string;
-  role: 'admin' | 'manager';
+  role: 'admin' | 'editor';
+  isActive: boolean;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 // In-memory storage (replace with actual database in production)
@@ -421,7 +423,9 @@ const users: User[] = [
     username: 'admin',
     passwordHash: '$2b$10$ZQli4KsPF.oReH2gtcvOzu47zW3NZaU/viXHIVS44eA5SDaoXK8xm', // admin123
     role: 'admin',
-    createdAt: new Date()
+    isActive: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
   }
 ];
 
@@ -499,6 +503,39 @@ export const db = {
   
   getUserById: (id: string) => {
     return users.find(user => user.id === id);
+  },
+
+  getUsers: () => {
+    return users;
+  },
+
+  createUser: (userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const newUser: User = {
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      ...userData,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    users.push(newUser);
+    return newUser;
+  },
+
+  updateUser: (id: string, updates: Partial<Omit<User, 'id' | 'createdAt'>>) => {
+    const index = users.findIndex(user => user.id === id);
+    if (index !== -1) {
+      users[index] = { ...users[index], ...updates, updatedAt: new Date() };
+      return users[index];
+    }
+    return null;
+  },
+
+  deleteUser: (id: string) => {
+    const index = users.findIndex(user => user.id === id);
+    if (index !== -1) {
+      const deleted = users.splice(index, 1)[0];
+      return deleted;
+    }
+    return null;
   },
 
   // Menu Categories

@@ -6,8 +6,10 @@ CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    role VARCHAR(20) DEFAULT 'admin',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    role VARCHAR(20) DEFAULT 'editor' CHECK (role IN ('admin', 'editor')),
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Menu categories table
@@ -66,8 +68,8 @@ CREATE TABLE IF NOT EXISTS menu_status (
 );
 
 -- Insert default admin user (password: admin123)
-INSERT INTO users (username, password_hash, role) VALUES 
-('admin', '$2b$10$ZQli4KsPF.oReH2gtcvOzu47zW3NZaU/viXHIVS44eA5SDaoXK8xm', 'admin')
+INSERT INTO users (username, password_hash, role, is_active) VALUES 
+('admin', '$2b$10$ZQli4KsPF.oReH2gtcvOzu47zW3NZaU/viXHIVS44eA5SDaoXK8xm', 'admin', true)
 ON CONFLICT (username) DO NOTHING;
 
 -- Insert default menu categories

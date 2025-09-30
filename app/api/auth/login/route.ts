@@ -19,11 +19,19 @@ export async function POST(request: NextRequest) {
 
     // Get user from database
     const user = await DatabaseService.getUserByUsername(username);
-    console.log('User found:', user ? { id: user.id, username: user.username, hasPassword: !!user.passwordHash } : 'No user found');
+    console.log('User found:', user ? { id: user.id, username: user.username, hasPassword: !!user.passwordHash, isActive: user.isActive } : 'No user found');
 
     if (!user) {
       return NextResponse.json(
         { error: 'Invalid credentials' },
+        { status: 401 }
+      );
+    }
+
+    // Check if user account is active
+    if (!user.isActive) {
+      return NextResponse.json(
+        { error: 'Account is disabled' },
         { status: 401 }
       );
     }
