@@ -70,6 +70,30 @@ export async function POST(request: NextRequest) {
     `;
     console.log('✅ Ensured announcements table exists');
 
+    // Migration 3: Add display_order to menu_items and backfill
+    try {
+      await sql`
+        ALTER TABLE menu_items 
+        ADD COLUMN IF NOT EXISTS display_order INTEGER
+      `;
+      console.log('✅ Ensured display_order column exists on menu_items');
+      // Backfill only where null
+      await sql`
+        WITH ranked AS (
+          SELECT id, ROW_NUMBER() OVER (PARTITION BY menu_type, category ORDER BY created_at) AS rn
+          FROM menu_items
+          WHERE display_order IS NULL
+        )
+        UPDATE menu_items m
+        SET display_order = r.rn
+        FROM ranked r
+        WHERE m.id = r.id
+      `;
+      console.log('✅ Backfilled display_order for existing menu_items');
+    } catch (error) {
+      console.log('display_order migration for menu_items may have been applied already:', error);
+    }
+
     // Check current users
     const userCheck = await sql`SELECT username, role, is_active FROM users`;
     console.log('Current users after migration:', userCheck.rows);
@@ -81,7 +105,8 @@ export async function POST(request: NextRequest) {
         'Added is_active column to users table',
         'Added created_at column to users table', 
         'Added updated_at column to users table',
-        'Ensured announcements table exists'
+        'Ensured announcements table exists',
+        'Ensured display_order column on menu_items and backfilled nulls'
       ],
       users: userCheck.rows
     }, { headers });

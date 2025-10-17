@@ -329,8 +329,8 @@ export class DatabaseService {
 
     try {
       const query = menuType 
-        ? sql`SELECT * FROM menu_items WHERE menu_type = ${menuType} ORDER BY created_at DESC`
-        : sql`SELECT * FROM menu_items ORDER BY created_at DESC`;
+        ? sql`SELECT * FROM menu_items WHERE menu_type = ${menuType} ORDER BY display_order NULLS LAST, created_at DESC`
+        : sql`SELECT * FROM menu_items ORDER BY display_order NULLS LAST, created_at DESC`;
       
       const result = await query;
       return result.rows.map(row => ({
@@ -342,6 +342,7 @@ export class DatabaseService {
         menuType: row.menu_type as 'breakfast' | 'lunch' | 'dinner',
         imageUrl: row.image_url,
         isAvailable: row.is_available,
+        displayOrder: row.display_order ?? undefined,
         createdAt: new Date(row.created_at),
         updatedAt: new Date(row.updated_at)
       }));
@@ -358,9 +359,13 @@ export class DatabaseService {
     }
 
     try {
+      // Determine next display order for this category/menuType
+      const next = await sql`SELECT COALESCE(MAX(display_order), 0) + 1 as next FROM menu_items WHERE menu_type = ${item.menuType} AND category = ${item.category}`;
+      const nextOrder = (next.rows?.[0]?.next as number) || 1;
+
       const result = await sql`
-        INSERT INTO menu_items (title, description, price, category, menu_type, image_url, is_available)
-        VALUES (${item.title}, ${item.description}, ${item.price}, ${item.category}, ${item.menuType}, ${item.imageUrl || null}, ${item.isAvailable})
+        INSERT INTO menu_items (title, description, price, category, menu_type, image_url, is_available, display_order)
+        VALUES (${item.title}, ${item.description}, ${item.price}, ${item.category}, ${item.menuType}, ${item.imageUrl || null}, ${item.isAvailable}, ${nextOrder})
         RETURNING *, id::text
       `;
       
@@ -374,6 +379,7 @@ export class DatabaseService {
         menuType: row.menu_type,
         imageUrl: row.image_url,
         isAvailable: row.is_available,
+        displayOrder: row.display_order ?? undefined,
         createdAt: new Date(row.created_at),
         updatedAt: new Date(row.updated_at)
       };
@@ -383,7 +389,10 @@ export class DatabaseService {
     }
   }
 
-  static async updateMenuItem(id: string, updates: Partial<Omit<MenuItem, 'id' | 'createdAt'>>): Promise<MenuItem | null> {
+  static async updateMenuItem(
+    id: string,
+    updates: Partial<Pick<MenuItem, 'title' | 'description' | 'price' | 'category' | 'menuType' | 'imageUrl' | 'isAvailable' | 'displayOrder'>>
+  ): Promise<MenuItem | null> {
     const devDatabase = initDevDB();
     if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
       return devDatabase.db.updateMenuItem(id, updates);
@@ -399,6 +408,7 @@ export class DatabaseService {
             menu_type = COALESCE(${updates.menuType}, menu_type),
             image_url = COALESCE(${updates.imageUrl}, image_url),
             is_available = COALESCE(${updates.isAvailable}, is_available),
+            display_order = COALESCE(${updates.displayOrder}, display_order),
             updated_at = CURRENT_TIMESTAMP
         WHERE id = ${id}
         RETURNING *, id::text
@@ -416,6 +426,7 @@ export class DatabaseService {
         menuType: row.menu_type,
         imageUrl: row.image_url,
         isAvailable: row.is_available,
+        displayOrder: row.display_order ?? undefined,
         createdAt: new Date(row.created_at),
         updatedAt: new Date(row.updated_at)
       };
@@ -452,12 +463,48 @@ export class DatabaseService {
         menuType: row.menu_type,
         imageUrl: row.image_url,
         isAvailable: row.is_available,
+        displayOrder: row.display_order ?? undefined,
         createdAt: new Date(row.created_at),
         updatedAt: new Date(row.updated_at)
       };
     } catch (error) {
       console.error('Database error:', error);
       return null;
+    }
+  }
+
+  static async reorderMenuItems(
+    menuType: 'breakfast' | 'lunch' | 'dinner',
+    category: string,
+    orderedIds: string[]
+  ): Promise<MenuItem[]> {
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.reorderMenuItems(menuType, category, orderedIds);
+    }
+
+    try {
+      for (let i = 0; i < orderedIds.length; i++) {
+        const id = orderedIds[i];
+        await sql`UPDATE menu_items SET display_order = ${i + 1} WHERE id = ${id} AND menu_type = ${menuType} AND category = ${category}`;
+      }
+      const result = await sql`SELECT * FROM menu_items WHERE menu_type = ${menuType} AND category = ${category} ORDER BY display_order NULLS LAST, created_at DESC`;
+      return result.rows.map(row => ({
+        id: row.id.toString(),
+        title: row.title,
+        description: row.description,
+        price: parseFloat(row.price),
+        category: row.category,
+        menuType: row.menu_type as 'breakfast' | 'lunch' | 'dinner',
+        imageUrl: row.image_url,
+        isAvailable: row.is_available,
+        displayOrder: row.display_order ?? undefined,
+        createdAt: new Date(row.created_at),
+        updatedAt: new Date(row.updated_at)
+      }));
+    } catch (error) {
+      console.error('Database error:', error);
+      return [];
     }
   }
 
@@ -539,6 +586,58 @@ export class DatabaseService {
     } catch (error) {
       console.error('Database error:', error);
       return null;
+    }
+  }
+
+  static async updateMenuCategory(id: string, updates: Partial<Pick<MenuCategory, 'name' | 'displayOrder'>>): Promise<MenuCategory | null> {
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.updateMenuCategory(id, updates);
+    }
+
+    try {
+      const result = await sql`
+        UPDATE menu_categories
+        SET name = COALESCE(${updates.name}, name),
+            display_order = COALESCE(${updates.displayOrder}, display_order)
+        WHERE id = ${id}
+        RETURNING *, id::text
+      `;
+      if (result.rows.length === 0) return null;
+      const row = result.rows[0];
+      return {
+        id: row.id,
+        name: row.name,
+        menuType: row.menu_type,
+        displayOrder: row.display_order,
+        createdAt: new Date(row.created_at)
+      };
+    } catch (error) {
+      console.error('Database error:', error);
+      return null;
+    }
+  }
+
+  static async renameCategoryInItems(
+    menuType: 'breakfast' | 'lunch' | 'dinner',
+    oldName: string,
+    newName: string
+  ): Promise<number> {
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.renameCategoryInItems(menuType, oldName, newName);
+    }
+    try {
+      const result = await sql`
+        UPDATE menu_items
+        SET category = ${newName}
+        WHERE menu_type = ${menuType} AND category = ${oldName}
+      `;
+      // @vercel/postgres doesn't return affected rows count reliably; return 0
+      return 0;
+    } catch (error) {
+      console.error('Database error:', error);
+      return 0;
     }
   }
 
