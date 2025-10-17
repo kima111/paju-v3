@@ -51,10 +51,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Determine next display order for this menu type
+    const existing = await DatabaseService.getMenuCategories(menuType);
+    const nextOrder = existing.length > 0 ? Math.max(...existing.map(c => c.displayOrder || 0)) + 1 : 1;
+
     const category = await DatabaseService.createMenuCategory({
       name: name.trim(),
       menuType,
-      displayOrder: 1
+      displayOrder: nextOrder
     });
 
     return NextResponse.json(category);
