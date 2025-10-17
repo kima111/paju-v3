@@ -1,20 +1,18 @@
 import { sql } from '@vercel/postgres';
 import type { MenuItem, MenuCategory, RestaurantHours, MenuStatus, User, Announcement } from './database';
 
-// Configure database connection for Neon
-if (process.env.NODE_ENV === 'production') {
-  // Map Neon variables to what @vercel/postgres expects
-  if (process.env.DATABASE_POSTGRES_URL) {
-    process.env.POSTGRES_URL = process.env.DATABASE_POSTGRES_URL;
-  } else if (process.env.DATABASE_DATABASE_URL) {
-    process.env.POSTGRES_URL = process.env.DATABASE_DATABASE_URL;
-  }
-  
-  if (process.env.DATABASE_POSTGRES_URL_NON_POOLING) {
-    process.env.POSTGRES_URL_NON_POOLING = process.env.DATABASE_POSTGRES_URL_NON_POOLING;
-  } else if (process.env.DATABASE_DATABASE_URL_UNPOOLED) {
-    process.env.POSTGRES_URL_NON_POOLING = process.env.DATABASE_DATABASE_URL_UNPOOLED;
-  }
+// Configure database connection for Neon (map env vars in all environments)
+// This lets local dev connect to Neon/Postgres when desired.
+if (process.env.DATABASE_POSTGRES_URL) {
+  process.env.POSTGRES_URL = process.env.DATABASE_POSTGRES_URL;
+} else if (process.env.DATABASE_DATABASE_URL) {
+  process.env.POSTGRES_URL = process.env.DATABASE_DATABASE_URL;
+}
+
+if (process.env.DATABASE_POSTGRES_URL_NON_POOLING) {
+  process.env.POSTGRES_URL_NON_POOLING = process.env.DATABASE_POSTGRES_URL_NON_POOLING;
+} else if (process.env.DATABASE_DATABASE_URL_UNPOOLED) {
+  process.env.POSTGRES_URL_NON_POOLING = process.env.DATABASE_DATABASE_URL_UNPOOLED;
 }
 
 // Development fallback
@@ -27,6 +25,10 @@ let devDB: {
 
 // Initialize development database synchronously
 function initDevDB() {
+  // Allow forcing real DB usage in development
+  if (process.env.NODE_ENV !== 'production' && process.env.USE_DEV_DB === 'false') {
+    return null;
+  }
   if (process.env.NODE_ENV !== 'production' && !devDB) {
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -331,10 +333,10 @@ export class DatabaseService {
       const query = menuType 
         ? sql`SELECT * FROM menu_items WHERE menu_type = ${menuType} ORDER BY display_order NULLS LAST, created_at DESC`
         : sql`SELECT * FROM menu_items ORDER BY display_order NULLS LAST, created_at DESC`;
-      
+
       const result = await query;
       return result.rows.map(row => ({
-        id: row.id.toString(),
+        id: row.id?.toString?.() ?? String(row.id),
         title: row.title,
         description: row.description,
         price: parseFloat(row.price),
@@ -347,6 +349,39 @@ export class DatabaseService {
         updatedAt: new Date(row.updated_at)
       }));
     } catch (error) {
+      // If display_order column doesn't exist, add it and fall back to created_at ordering
+      // NeonDbError code 42703 = undefined column
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const err: any = error;
+      if (err?.code === '42703') {
+        try {
+          await sql`ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS display_order INTEGER`;
+        } catch (alterError) {
+          console.warn('Could not add display_order to menu_items (may already exist):', alterError);
+        }
+        try {
+          const fallbackQuery = menuType
+            ? sql`SELECT * FROM menu_items WHERE menu_type = ${menuType} ORDER BY created_at DESC`
+            : sql`SELECT * FROM menu_items ORDER BY created_at DESC`;
+          const result = await fallbackQuery;
+          return result.rows.map(row => ({
+            id: row.id?.toString?.() ?? String(row.id),
+            title: row.title,
+            description: row.description,
+            price: parseFloat(row.price),
+            category: row.category,
+            menuType: row.menu_type as 'breakfast' | 'lunch' | 'dinner',
+            imageUrl: row.image_url,
+            isAvailable: row.is_available,
+            displayOrder: row.display_order ?? undefined,
+            createdAt: new Date(row.created_at),
+            updatedAt: new Date(row.updated_at)
+          }));
+        } catch (fallbackError) {
+          console.error('Fallback query failed:', fallbackError);
+          return [];
+        }
+      }
       console.error('Database error:', error);
       return [];
     }
