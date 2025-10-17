@@ -542,6 +542,38 @@ export class DatabaseService {
     }
   }
 
+  static async reorderMenuCategories(
+    menuType: 'breakfast' | 'lunch' | 'dinner',
+    orderedIds: string[]
+  ): Promise<MenuCategory[]> {
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.reorderMenuCategories(menuType, orderedIds);
+    }
+
+    try {
+      // Update each category's display_order based on the provided order
+      // Using sequential updates for simplicity
+      for (let i = 0; i < orderedIds.length; i++) {
+        const id = orderedIds[i];
+        await sql`UPDATE menu_categories SET display_order = ${i + 1} WHERE id = ${id} AND menu_type = ${menuType}`;
+      }
+
+      // Return the updated list
+      const result = await sql`SELECT * FROM menu_categories WHERE menu_type = ${menuType} ORDER BY display_order`;
+      return result.rows.map(row => ({
+        id: row.id.toString(),
+        name: row.name,
+        menuType: row.menu_type as 'breakfast' | 'lunch' | 'dinner',
+        displayOrder: row.display_order,
+        createdAt: new Date(row.created_at)
+      }));
+    } catch (error) {
+      console.error('Database error:', error);
+      return [];
+    }
+  }
+
   // Restaurant Hours
   static async getRestaurantHours(): Promise<RestaurantHours[]> {
     const devDatabase = initDevDB();

@@ -2,17 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { MenuItem } from '../lib/database';
+import { MenuItem, MenuCategory } from '../lib/database';
 
 export default function MenuSection() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [enabledMenus, setEnabledMenus] = useState<('breakfast' | 'lunch' | 'dinner')[]>([]);
   const [activeMenu, setActiveMenu] = useState<'breakfast' | 'lunch' | 'dinner'>('dinner');
   const [loading, setLoading] = useState(true);
+  const [allCategories, setAllCategories] = useState<MenuCategory[]>([]);
 
   useEffect(() => {
     fetchEnabledMenus();
     fetchMenuItems();
+    fetchCategories();
   }, []);
 
   const fetchEnabledMenus = async () => {
@@ -50,11 +52,27 @@ export default function MenuSection() {
     }
   };
 
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch('/api/menu/categories');
+      if (response.ok) {
+        const cats = await response.json();
+        setAllCategories(cats);
+      }
+    } catch (error) {
+      console.error('Error fetching menu categories:', error);
+    }
+  };
+
   // Only show items from enabled menus
   const filteredItems = menuItems.filter(item => 
     item.menuType === activeMenu && enabledMenus.includes(item.menuType)
   );
-  const categories = [...new Set(filteredItems.map(item => item.category))];
+  const categories = allCategories
+    .filter(c => c.menuType === activeMenu)
+    .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
+    .map(c => c.name)
+    .filter(name => filteredItems.some(item => item.category === name));
 
   if (loading) {
     return (

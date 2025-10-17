@@ -632,6 +632,23 @@ export const db = {
       return deleted;
     }
     return null;
+  },
+
+  reorderMenuCategories: (menuType: 'breakfast' | 'lunch' | 'dinner', orderedIds: string[]) => {
+    // Ensure only categories of the given menuType are affected
+    const target = menuCategories.filter(cat => cat.menuType === menuType);
+    // Map id -> category for quick access
+    const map = new Map(target.map(c => [c.id, c] as const));
+    orderedIds.forEach((id, idx) => {
+      const cat = map.get(id);
+      if (cat) {
+        cat.displayOrder = idx + 1;
+      }
+    });
+    // Return updated ordered list for this menuType
+    return menuCategories
+      .filter(cat => cat.menuType === menuType)
+      .sort((a, b) => a.displayOrder - b.displayOrder);
   }
 };
 

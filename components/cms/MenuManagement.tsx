@@ -117,7 +117,54 @@ export default function MenuManagement() {
   };
 
   const filteredItems = menuItems.filter(item => item.menuType === activeMenuType);
-  const activeCategories = categories.filter(cat => cat.menuType === activeMenuType);
+  const activeCategories = categories
+    .filter(cat => cat.menuType === activeMenuType)
+    .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+
+  const reorderCategories = async (direction: 'up' | 'down', index: number) => {
+    const cats = activeCategories.slice();
+    if ((direction === 'up' && index === 0) || (direction === 'down' && index === cats.length - 1)) return;
+    const swapWith = direction === 'up' ? index - 1 : index + 1;
+    // Build a new ordered list for this menu type
+    const newOrderForType = cats.map(c => c.id);
+    [newOrderForType[index], newOrderForType[swapWith]] = [newOrderForType[swapWith], newOrderForType[index]];
+
+    // Optimistic local state update
+    const updatedCategories = categories.map(c => {
+      const pos = newOrderForType.indexOf(c.id);
+      if (c.menuType === activeMenuType && pos !== -1) {
+        return { ...c, displayOrder: pos + 1 };
+      }
+      return c;
+    });
+    setCategories(updatedCategories);
+
+    // Persist via API
+    try {
+      const resp = await fetch('/api/menu/categories/reorder', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ menuType: activeMenuType, orderedIds: newOrderForType })
+      });
+      if (!resp.ok) {
+        console.error('Failed to reorder categories');
+        await fetchCategories();
+      } else {
+        const updated = await resp.json();
+        // Merge returned orders for active menuType
+        const merged = categories.map(c => {
+          if (c.menuType !== activeMenuType) return c;
+          const found = updated.find((u: MenuCategory) => u.id === c.id);
+          return found ? { ...c, displayOrder: found.displayOrder } : c;
+        });
+        setCategories(merged);
+      }
+    } catch (e) {
+      console.error('Error reordering categories:', e);
+      await fetchCategories();
+    }
+  };
 
   if (loading) {
     return (
@@ -219,13 +266,31 @@ export default function MenuManagement() {
             No categories found for {activeMenuType} menu. Add some categories to get started.
           </div>
         ) : (
-          activeCategories.map(category => (
+          activeCategories.map((category, idx) => (
             <div key={category.id} className="space-y-4">
               <div className="flex justify-between items-center">
                 <h3 className="text-xl font-light text-white/80 border-b border-white/10 pb-2 flex-1">
                   {category.name}
                 </h3>
-                <div className="flex space-x-2 ml-4">
+                <div className="flex items-center space-x-2 ml-4">
+                  <div className="flex items-center space-x-1">
+                    <button
+                      aria-label="Move up"
+                      disabled={idx === 0}
+                      onClick={() => reorderCategories('up', idx)}
+                      className={`px-2 py-1 text-xs border ${idx === 0 ? 'opacity-30 cursor-not-allowed border-white/20 text-white/30' : 'border-white/30 text-white/60 hover:text-white hover:border-white/60'}`}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      aria-label="Move down"
+                      disabled={idx === activeCategories.length - 1}
+                      onClick={() => reorderCategories('down', idx)}
+                      className={`px-2 py-1 text-xs border ${idx === activeCategories.length - 1 ? 'opacity-30 cursor-not-allowed border-white/20 text-white/30' : 'border-white/30 text-white/60 hover:text-white hover:border-white/60'}`}
+                    >
+                      ↓
+                    </button>
+                  </div>
                   <button
                     onClick={() => setShowCategoryForm(true)}
                     className="text-xs text-white/40 hover:text-white/60 transition-colors"
