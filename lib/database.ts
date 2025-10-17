@@ -8,6 +8,7 @@ export interface MenuItem {
   menuType: 'breakfast' | 'lunch' | 'dinner';
   imageUrl?: string;
   isAvailable: boolean;
+  displayOrder?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -447,8 +448,14 @@ const announcements: Announcement[] = [];
 // Database operations
 export const db = {
   // Menu Items
-  getMenuItems: (menuType?: 'lunch' | 'dinner') => {
-    return menuType ? menuItems.filter(item => item.menuType === menuType) : menuItems;
+  getMenuItems: (menuType?: 'breakfast' | 'lunch' | 'dinner') => {
+    const list = menuType ? menuItems.filter(item => item.menuType === menuType) : menuItems;
+    return [...list].sort((a, b) => {
+      const ao = a.displayOrder ?? Number.MAX_SAFE_INTEGER;
+      const bo = b.displayOrder ?? Number.MAX_SAFE_INTEGER;
+      if (ao !== bo) return ao - bo;
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    });
   },
   
   getMenuItem: (id: string) => {
@@ -456,9 +463,13 @@ export const db = {
   },
   
   createMenuItem: (item: Omit<MenuItem, 'id' | 'createdAt' | 'updatedAt'>) => {
+    // determine next display order within category/menuType
+    const siblings = menuItems.filter(mi => mi.menuType === item.menuType && mi.category === item.category);
+    const nextOrder = siblings.length > 0 ? Math.max(...siblings.map(s => s.displayOrder || 0)) + 1 : 1;
     const newItem: MenuItem = {
       ...item,
       id: Date.now().toString(),
+      displayOrder: nextOrder,
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -487,6 +498,29 @@ export const db = {
     }
     console.log('No item found with ID:', id);
     return null;
+  },
+
+  reorderMenuItems: (menuType: 'breakfast' | 'lunch' | 'dinner', category: string, orderedIds: string[]) => {
+    const target = menuItems.filter(mi => mi.menuType === menuType && mi.category === category);
+    const map = new Map(target.map(i => [i.id, i] as const));
+    orderedIds.forEach((id, idx) => {
+      const it = map.get(id);
+      if (it) it.displayOrder = idx + 1;
+    });
+    return menuItems
+      .filter(mi => mi.menuType === menuType && mi.category === category)
+      .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+  },
+
+  renameCategoryInItems: (menuType: 'breakfast' | 'lunch' | 'dinner', oldName: string, newName: string) => {
+    let count = 0;
+    menuItems.forEach(mi => {
+      if (mi.menuType === menuType && mi.category === oldName) {
+        mi.category = newName;
+        count++;
+      }
+    });
+    return count;
   },
 
   // Restaurant Hours
@@ -630,6 +664,15 @@ export const db = {
     if (index !== -1) {
       const deleted = menuCategories.splice(index, 1)[0];
       return deleted;
+    }
+    return null;
+  },
+
+  updateMenuCategory: (id: string, updates: Partial<Pick<MenuCategory, 'name' | 'displayOrder'>>) => {
+    const idx = menuCategories.findIndex(c => c.id === id);
+    if (idx !== -1) {
+      menuCategories[idx] = { ...menuCategories[idx], ...updates };
+      return menuCategories[idx];
     }
     return null;
   },

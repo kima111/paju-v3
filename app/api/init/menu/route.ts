@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
         menu_type VARCHAR(20) NOT NULL CHECK (menu_type IN ('breakfast', 'lunch', 'dinner')),
         image_url TEXT,
         is_available BOOLEAN DEFAULT true,
+        display_order INTEGER,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )

@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
@@ -38,14 +38,10 @@ export default function MenuManagement() {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch('/api/categories', {
-        credentials: 'include'
-      });
+      const response = await fetch('/api/categories', { credentials: 'include' });
       if (response.ok) {
         const cats = await response.json();
         setCategories(cats);
-      } else if (response.status === 401) {
-        console.error('Unauthorized access to categories');
       }
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -57,10 +53,7 @@ export default function MenuManagement() {
       const response = await fetch('/api/menu/status');
       if (response.ok) {
         const statuses = await response.json();
-        console.log('Menu statuses fetched:', statuses);
         setMenuStatuses(statuses);
-      } else {
-        console.error('Failed to fetch menu statuses:', response.status);
       }
     } catch (error) {
       console.error('Error fetching menu statuses:', error);
@@ -71,12 +64,8 @@ export default function MenuManagement() {
     if (!confirm(`Are you sure you want to delete the category "${categoryName}"? This action cannot be undone.`)) {
       return;
     }
-
     try {
-      const response = await fetch(`/api/categories/${categoryId}`, {
-        method: 'DELETE',
-      });
-
+      const response = await fetch(`/api/categories/${categoryId}`, { method: 'DELETE' });
       if (response.ok) {
         fetchCategories();
         alert('Category deleted successfully');
@@ -95,18 +84,12 @@ export default function MenuManagement() {
       const currentStatus = menuStatuses.find(status => status.menuType === menuType);
       const response = await fetch('/api/menu/status', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          menuType,
-          isEnabled: !currentStatus?.isEnabled
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ menuType, isEnabled: !currentStatus?.isEnabled }),
       });
-
       if (response.ok) {
-        const updatedStatuses = await response.json();
-        setMenuStatuses(updatedStatuses);
+        const updated = await response.json();
+        setMenuStatuses(updated);
       } else {
         alert('Failed to update menu status');
       }
@@ -125,11 +108,10 @@ export default function MenuManagement() {
     const cats = activeCategories.slice();
     if ((direction === 'up' && index === 0) || (direction === 'down' && index === cats.length - 1)) return;
     const swapWith = direction === 'up' ? index - 1 : index + 1;
-    // Build a new ordered list for this menu type
+
     const newOrderForType = cats.map(c => c.id);
     [newOrderForType[index], newOrderForType[swapWith]] = [newOrderForType[swapWith], newOrderForType[index]];
 
-    // Optimistic local state update
     const updatedCategories = categories.map(c => {
       const pos = newOrderForType.indexOf(c.id);
       if (c.menuType === activeMenuType && pos !== -1) {
@@ -139,7 +121,6 @@ export default function MenuManagement() {
     });
     setCategories(updatedCategories);
 
-    // Persist via API
     try {
       const resp = await fetch('/api/menu/categories/reorder', {
         method: 'PUT',
@@ -152,7 +133,6 @@ export default function MenuManagement() {
         await fetchCategories();
       } else {
         const updated = await resp.json();
-        // Merge returned orders for active menuType
         const merged = categories.map(c => {
           if (c.menuType !== activeMenuType) return c;
           const found = updated.find((u: MenuCategory) => u.id === c.id);
@@ -269,9 +249,29 @@ export default function MenuManagement() {
           activeCategories.map((category, idx) => (
             <div key={category.id} className="space-y-4">
               <div className="flex justify-between items-center">
-                <h3 className="text-xl font-light text-white/80 border-b border-white/10 pb-2 flex-1">
-                  {category.name}
-                </h3>
+                <InlineCategoryHeader
+                  category={category}
+                  onRenamed={async (newName: string) => {
+                    try {
+                      const resp = await fetch(`/api/categories/${category.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ name: newName })
+                      });
+                      if (resp.ok) {
+                        const updated = await resp.json();
+                        setCategories(categories.map(c => c.id === updated.id ? { ...c, name: updated.name } : c));
+                        setMenuItems(menuItems.map(mi => mi.category === category.name ? { ...mi, category: updated.name } : mi));
+                      } else {
+                        const data = await resp.json();
+                        alert(data.error || 'Failed to rename category');
+                      }
+                    } catch (e) {
+                      console.error('Error renaming category:', e);
+                    }
+                  }}
+                />
                 <div className="flex items-center space-x-2 ml-4">
                   <div className="flex items-center space-x-1">
                     <button
@@ -310,37 +310,110 @@ export default function MenuManagement() {
                   const categoryItems = filteredItems.filter(item => item.category === category.name);
                   const itemsWithImages = categoryItems.filter(item => item.imageUrl);
                   const itemsWithoutImages = categoryItems.filter(item => !item.imageUrl);
-                  
                   return (
                     <>
-                      {/* Grid layout for items WITH images - responsive */}
                       {itemsWithImages.length > 0 && (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                          {itemsWithImages.map(item => (
-                            <MenuItemCard
-                              key={item.id}
-                              item={item}
-                              onEdit={setEditingItem}
-                              onRefresh={fetchMenuItems}
-                            />
-                          ))}
+                          {itemsWithImages.map((item) => {
+                            // Reorder within image-only subgroup, then merge back into full list
+                            const allIds = categoryItems.map(ci => ci.id);
+                            const imageIds = itemsWithImages.map(ii => ii.id);
+                            const pos = imageIds.indexOf(item.id);
+                            const canUp = pos > 0;
+                            const canDown = pos < imageIds.length - 1;
+                            const move = async (dir: 'up' | 'down') => {
+                              const newImageIds = [...imageIds];
+                              const swapWith = dir === 'up' ? pos - 1 : pos + 1;
+                              if (swapWith < 0 || swapWith >= newImageIds.length) return;
+                              [newImageIds[swapWith], newImageIds[pos]] = [newImageIds[pos], newImageIds[swapWith]];
+
+                              // Merge new image order into full order, preserving non-image positions
+                              const imageSet = new Set(imageIds);
+                              const merged: string[] = [];
+                              let idx = 0;
+                              for (const id of allIds) {
+                                if (imageSet.has(id)) {
+                                  merged.push(newImageIds[idx++]);
+                                } else {
+                                  merged.push(id);
+                                }
+                              }
+
+                              await fetch('/api/menu/items/reorder', {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'include',
+                                body: JSON.stringify({ menuType: activeMenuType, category: category.name, orderedIds: merged })
+                              });
+                              fetchMenuItems();
+                            };
+                            return (
+                              <MenuItemCard
+                                key={item.id}
+                                item={item}
+                                onEdit={setEditingItem}
+                                onRefresh={fetchMenuItems}
+                                onMoveLeft={canUp ? () => move('up') : undefined}
+                                onMoveUp={canUp ? () => move('up') : undefined}
+                                onMoveDown={canDown ? () => move('down') : undefined}
+                                onMoveRight={canDown ? () => move('down') : undefined}
+                              />
+                            );
+                          })}
                         </div>
                       )}
-                      
-                      {/* Linear layout for items WITHOUT images - text-only format */}
+
                       {itemsWithoutImages.length > 0 && (
                         <div className="space-y-4">
-                          {itemsWithoutImages.map(item => (
-                            <MenuItemCard
-                              key={item.id}
-                              item={item}
-                              onEdit={setEditingItem}
-                              onRefresh={fetchMenuItems}
-                            />
-                          ))}
+                          {itemsWithoutImages.map((item) => {
+                            // Reorder within text-only subgroup, then merge back into full list
+                            const allIds = categoryItems.map(ci => ci.id);
+                            const textIds = itemsWithoutImages.map(ii => ii.id);
+                            const pos = textIds.indexOf(item.id);
+                            const canUp = pos > 0;
+                            const canDown = pos < textIds.length - 1;
+                            const move = async (dir: 'up' | 'down') => {
+                              const newTextIds = [...textIds];
+                              const swapWith = dir === 'up' ? pos - 1 : pos + 1;
+                              if (swapWith < 0 || swapWith >= newTextIds.length) return;
+                              [newTextIds[swapWith], newTextIds[pos]] = [newTextIds[pos], newTextIds[swapWith]];
+
+                              // Merge new text-only order into full order, preserving image positions
+                              const textSet = new Set(textIds);
+                              const merged: string[] = [];
+                              let idx = 0;
+                              for (const id of allIds) {
+                                if (textSet.has(id)) {
+                                  merged.push(newTextIds[idx++]);
+                                } else {
+                                  merged.push(id);
+                                }
+                              }
+
+                              await fetch('/api/menu/items/reorder', {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'include',
+                                body: JSON.stringify({ menuType: activeMenuType, category: category.name, orderedIds: merged })
+                              });
+                              fetchMenuItems();
+                            };
+                            return (
+                              <MenuItemCard
+                                key={item.id}
+                                item={item}
+                                onEdit={setEditingItem}
+                                onRefresh={fetchMenuItems}
+                                onMoveLeft={canUp ? () => move('up') : undefined}
+                                onMoveUp={canUp ? () => move('up') : undefined}
+                                onMoveDown={canDown ? () => move('down') : undefined}
+                                onMoveRight={canDown ? () => move('down') : undefined}
+                              />
+                            );
+                          })}
                         </div>
                       )}
-                      
+
                       {categoryItems.length === 0 && (
                         <div className="text-white/40 text-sm italic">No items in this category</div>
                       )}
@@ -433,13 +506,51 @@ export default function MenuManagement() {
   );
 }
 
+function InlineCategoryHeader({ category, onRenamed }: { category: MenuCategory; onRenamed: (newName: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(category.name);
+  return (
+    <div className="flex-1 border-b border-white/10 pb-2">
+      {editing ? (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const name = value.trim();
+            if (!name) return;
+            onRenamed(name);
+            setEditing(false);
+          }}
+          className="flex items-center space-x-2"
+        >
+          <input
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            className="bg-zinc-900 border border-white/20 text-white px-2 py-1 text-sm flex-1"
+          />
+          <button type="submit" className="text-xs bg-white text-black px-2 py-1">Save</button>
+          <button type="button" onClick={() => { setEditing(false); setValue(category.name); }} className="text-xs text-white/60 px-2 py-1">Cancel</button>
+        </form>
+      ) : (
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-light text-white/80">{category.name}</h3>
+          <button onClick={() => setEditing(true)} className="text-xs text-white/40 hover:text-white/60">Rename</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface MenuItemCardProps {
   item: MenuItem;
   onEdit: (item: MenuItem) => void;
   onRefresh: () => void;
+  onMoveUp?: () => void | Promise<void>;
+  onMoveDown?: () => void | Promise<void>;
+  onMoveLeft?: () => void | Promise<void>;
+  onMoveRight?: () => void | Promise<void>;
 }
 
-function MenuItemCard({ item, onEdit, onRefresh }: MenuItemCardProps) {
+function MenuItemCard({ item, onEdit, onRefresh, onMoveUp, onMoveDown, onMoveLeft, onMoveRight }: MenuItemCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = async () => {
@@ -447,10 +558,7 @@ function MenuItemCard({ item, onEdit, onRefresh }: MenuItemCardProps) {
 
     setIsDeleting(true);
     try {
-      const response = await fetch(`/api/menu/items/${item.id}`, {
-        method: 'DELETE',
-      });
-
+      const response = await fetch(`/api/menu/items/${item.id}`, { method: 'DELETE' });
       if (response.ok) {
         onRefresh();
       } else {
@@ -468,12 +576,9 @@ function MenuItemCard({ item, onEdit, onRefresh }: MenuItemCardProps) {
     try {
       const response = await fetch(`/api/menu/items/${item.id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isAvailable: !item.isAvailable }),
       });
-
       if (response.ok) {
         onRefresh();
       } else {
@@ -487,19 +592,11 @@ function MenuItemCard({ item, onEdit, onRefresh }: MenuItemCardProps) {
   return (
     <div className={`bg-zinc-900 border border-zinc-800 p-6 ${!item.isAvailable ? 'opacity-60' : ''}`}>
       {item.imageUrl ? (
-        // Layout with image
         <div className="flex justify-between items-start mb-4">
           <div className="flex space-x-4 flex-1">
-            {/* Image preview */}
             <div className="w-16 h-16 bg-zinc-800 rounded overflow-hidden flex-shrink-0 relative">
-              <Image 
-                src={item.imageUrl} 
-                alt={item.title}
-                fill
-                className="object-cover"
-              />
+              <Image src={item.imageUrl} alt={item.title} fill className="object-cover" />
             </div>
-            
             <div className="flex-1">
               <div className="flex items-center space-x-3 mb-2">
                 <h4 className="text-lg font-light text-white">{item.title}</h4>
@@ -516,7 +613,6 @@ function MenuItemCard({ item, onEdit, onRefresh }: MenuItemCardProps) {
           </div>
         </div>
       ) : (
-        // Text-only layout without image
         <div className="flex justify-between items-start mb-4">
           <div className="flex-1">
             <div className="flex items-center space-x-3 mb-2">
@@ -524,45 +620,43 @@ function MenuItemCard({ item, onEdit, onRefresh }: MenuItemCardProps) {
                 {item.isAvailable ? 'Available' : 'Unavailable'}
               </span>
             </div>
-            
-            {/* Text-only format with responsive leading dots from title to price */}
             <div className="flex items-baseline justify-between mb-2">
               <h4 className="text-lg font-light text-white flex-shrink-0 pr-3">{item.title}</h4>
               <div className="flex-1 border-b border-dotted border-white/30 mb-1"></div>
               <span className="text-white font-medium text-lg flex-shrink-0 pl-3">${item.price}</span>
             </div>
-            
             <p className="text-white/60 text-sm leading-relaxed mb-2">{item.description}</p>
             <span className="text-xs text-white/40 uppercase tracking-wider">{item.category}</span>
           </div>
         </div>
       )}
-      
-      {/* Action buttons - always visible */}
-      <div className="flex justify-end space-x-2 mt-4 pt-4 border-t border-zinc-800">
-        <button
-          onClick={toggleAvailability}
-          className={`px-3 py-1 text-xs ${
-            item.isAvailable 
-              ? 'bg-red-900/30 text-red-400 hover:bg-red-900/50' 
-              : 'bg-green-900/30 text-green-400 hover:bg-green-900/50'
-          } transition-colors`}
-        >
-          {item.isAvailable ? 'Disable' : 'Enable'}
-        </button>
-        <button
-          onClick={() => onEdit(item)}
-          className="px-3 py-1 text-xs bg-blue-900/30 text-blue-400 hover:bg-blue-900/50 transition-colors"
-        >
-          Edit
-        </button>
-        <button
-          onClick={handleDelete}
-          disabled={isDeleting}
-          className="px-3 py-1 text-xs bg-red-900/30 text-red-400 hover:bg-red-900/50 transition-colors disabled:opacity-50"
-        >
-          {isDeleting ? 'Deleting...' : 'Delete'}
-        </button>
+
+      <div className="flex justify-between items-center mt-4 pt-4 border-t border-zinc-800">
+        <div className="flex items-center space-x-1">
+          <button aria-label="Move left" onClick={() => onMoveLeft && onMoveLeft()} disabled={!onMoveLeft} className={`px-2 py-1 text-xs border ${onMoveLeft ? 'border-white/30 text-white/60 hover:text-white hover:border-white/60' : 'opacity-30 cursor-not-allowed border-white/20 text-white/30'}`}>
+            ←
+          </button>
+          <button aria-label="Move up" onClick={() => onMoveUp && onMoveUp()} disabled={!onMoveUp} className={`px-2 py-1 text-xs border ${onMoveUp ? 'border-white/30 text-white/60 hover:text-white hover:border-white/60' : 'opacity-30 cursor-not-allowed border-white/20 text-white/30'}`}>
+            ↑
+          </button>
+          <button aria-label="Move down" onClick={() => onMoveDown && onMoveDown()} disabled={!onMoveDown} className={`px-2 py-1 text-xs border ${onMoveDown ? 'border-white/30 text-white/60 hover:text-white hover:border-white/60' : 'opacity-30 cursor-not-allowed border-white/20 text-white/30'}`}>
+            ↓
+          </button>
+          <button aria-label="Move right" onClick={() => onMoveRight && onMoveRight()} disabled={!onMoveRight} className={`px-2 py-1 text-xs border ${onMoveRight ? 'border-white/30 text-white/60 hover:text-white hover:border-white/60' : 'opacity-30 cursor-not-allowed border-white/20 text-white/30'}`}>
+            →
+          </button>
+        </div>
+        <div className="flex items-center space-x-2">
+          <button onClick={toggleAvailability} className={`px-3 py-1 text-xs ${item.isAvailable ? 'bg-red-900/30 text-red-400 hover:bg-red-900/50' : 'bg-green-900/30 text-green-400 hover:bg-green-900/50'} transition-colors`}>
+            {item.isAvailable ? 'Disable' : 'Enable'}
+          </button>
+          <button onClick={() => onEdit(item)} className="px-3 py-1 text-xs bg-blue-900/30 text-blue-400 hover:bg-blue-900/50 transition-colors">
+            Edit
+          </button>
+          <button onClick={handleDelete} disabled={isDeleting} className="px-3 py-1 text-xs bg-red-900/30 text-red-400 hover:bg-red-900/50 transition-colors disabled:opacity-50">
+            {isDeleting ? 'Deleting...' : 'Delete'}
+          </button>
+        </div>
       </div>
     </div>
   );
