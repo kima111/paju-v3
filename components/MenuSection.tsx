@@ -164,7 +164,7 @@ export default function MenuSection() {
                         <div key={item.id} className="group cursor-pointer">
                           <div className="relative aspect-square bg-zinc-900 mb-6 overflow-hidden rounded-sm">
                             <Image
-                              src={item.imageUrl!}
+                              src={item.imageUrl!.startsWith('/uploads/') ? item.imageUrl! : item.imageUrl!}
                               alt={item.title}
                               fill
                               className="object-cover group-hover:scale-105 transition-transform duration-700 opacity-85 group-hover:opacity-100"
