@@ -6,8 +6,10 @@ export class BlobService {
    */
   static async uploadImage(file: File, filename: string): Promise<{ url: string; pathname: string } | null> {
     try {
-      if (process.env.NODE_ENV !== 'production') {
-        // In development, save files locally to public/uploads
+      const isDev = process.env.NODE_ENV !== 'production';
+      const usingProdDBInDev = isDev && process.env.USE_DEV_DB === 'false';
+      if (isDev && !usingProdDBInDev) {
+        // In development (when not using production DB), save files locally to public/uploads
         console.log('Development mode: Saving file locally for', filename);
         
         const fs = await import('fs');
