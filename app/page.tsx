@@ -81,6 +81,8 @@ export default function Home() {
               Contemporary Korean cuisine<br />
               in the heart of Seattle
             </p>
+            <a href="https://www.exploretock.com/paju" className="inline-block bg-white text-black px-12 py-4 text-xs tracking-[0.2em] uppercase transition-all duration-300 hover:bg-white/90 hover:scale-105"target="_blank" rel="noopener noreferrer">Make Reservation</a>
+<br /><br />
             <a 
               href="#menu" 
               className="inline-block border border-white/30 hover:border-white/60 px-8 py-3 text-xs tracking-[0.2em] uppercase transition-all duration-300 hover:bg-white/5"
@@ -185,7 +187,7 @@ export default function Home() {
             <div className="space-y-4">
               <div className="text-xs tracking-[0.3em] uppercase text-white/60">Contact</div>
               <p className="text-white/80 leading-relaxed">
-          <a href="tel:2068298215">(206) 829-8215</a><br /><a href="mailto:jeong.bill@pajuseattle.com">jeong.bill@pajuseattle.com</a></p>
+          <a href="tel:2068298215">(206) 829-8215</a><br /><a href="mailto:info@pajuseattle.com">info@pajuseattle.com</a></p>
             </div>
           </div>
             <a href="https://www.exploretock.com/paju" className="inline-block bg-white text-black px-12 py-4 text-xs tracking-[0.2em] uppercase transition-all duration-300 hover:bg-white/90 hover:scale-105"target="_blank" rel="noopener noreferrer">Make Reservation</a>
