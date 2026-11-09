@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import MenuSection from "../components/MenuSection";
 import RestaurantHoursDisplay from "../components/RestaurantHoursDisplay";
 import AnnouncementBanner from "../components/AnnouncementBanner";
@@ -11,8 +11,26 @@ import Image from "next/image";
 
 export default function Home() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isParkingMapOpen, setIsParkingMapOpen] = useState(false);
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
+
+  useEffect(() => {
+    if (!isParkingMapOpen) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsParkingMapOpen(false);
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isParkingMapOpen]);
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -175,7 +193,12 @@ export default function Home() {
                 <p className="text-white/60 text-sm leading-relaxed">
                   Entrance via 9th Alley N.
                 </p>
-                <div className="relative mx-auto mt-2 w-full max-w-[180px] aspect-[3/4] bg-zinc-900 rounded-sm overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setIsParkingMapOpen(true)}
+                  aria-label="Enlarge parking map"
+                  className="relative mx-auto mt-2 block w-full max-w-[180px] aspect-[3/4] bg-zinc-900 rounded-sm overflow-hidden cursor-zoom-in focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40"
+                >
                   <Image
                     src="/images/parking-map.jpg"
                     alt="Parking map showing entrance via 9th Alley N"
@@ -183,7 +206,7 @@ export default function Home() {
                     className="object-cover"
                     sizes="180px"
                   />
-                </div>
+                </button>
               </div>
             </div>
             <RestaurantHoursDisplay />
@@ -197,6 +220,60 @@ export default function Home() {
 
         </div>
       </section>
+
+      {isParkingMapOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Parking map"
+          className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/90 p-4 pt-20 sm:p-8 sm:pt-20"
+          onClick={() => setIsParkingMapOpen(false)}
+        >
+          <button
+            type="button"
+            onClick={() => setIsParkingMapOpen(false)}
+            aria-label="Close parking map"
+            className="absolute top-4 right-4 z-[110] flex h-12 w-12 items-center justify-center rounded-full bg-white text-black shadow-lg transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              className="h-5 w-5"
+              aria-hidden="true"
+            >
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+          <div className="relative z-[105] flex w-full max-w-lg flex-col items-center gap-4">
+            <button
+              type="button"
+              onClick={() => setIsParkingMapOpen(false)}
+              aria-label="Close parking map"
+              className="relative w-full max-h-[75vh] aspect-[3/4] cursor-zoom-out focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40"
+            >
+              <Image
+                src="/images/parking-map.jpg"
+                alt="Parking map showing entrance via 9th Alley N"
+                fill
+                className="object-contain"
+                sizes="(max-width: 640px) 100vw, 512px"
+                priority
+              />
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsParkingMapOpen(false)}
+              className="relative z-[110] px-6 py-3 text-sm tracking-[0.25em] uppercase text-white transition-colors hover:text-white/80 focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Footer - Ultra minimal */}
       <footer className="py-24 px-6 border-t border-white/10">
