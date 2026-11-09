@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DatabaseService } from '../../../../../lib/database-service';
+import { isMenuType } from '../../../../../lib/database';
 import { verifyJWT } from '../../../../../lib/auth';
 
 export async function PUT(request: NextRequest) {
@@ -16,9 +17,9 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { menuType, orderedIds } = body as { menuType?: 'breakfast' | 'lunch' | 'dinner'; orderedIds?: string[] };
+    const { menuType, orderedIds } = body as { menuType?: string; orderedIds?: string[] };
 
-    if (!menuType || !['breakfast', 'lunch', 'dinner'].includes(menuType)) {
+    if (!menuType || !isMenuType(menuType)) {
       return NextResponse.json({ error: 'Invalid or missing menuType' }, { status: 400 });
     }
     if (!Array.isArray(orderedIds) || orderedIds.length === 0 || !orderedIds.every(id => typeof id === 'string')) {

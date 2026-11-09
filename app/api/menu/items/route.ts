@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DatabaseService } from '../../../../lib/database-service';
+import { isMenuType, type MenuType } from '../../../../lib/database';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const menuType = searchParams.get('menuType') as 'breakfast' | 'lunch' | 'dinner' | null;
+    const requestedType = searchParams.get('menuType');
+    const menuType: MenuType | undefined = requestedType && isMenuType(requestedType) ? requestedType : undefined;
 
-    const menuItems = await DatabaseService.getMenuItems(menuType || undefined);
+    const menuItems = await DatabaseService.getMenuItems(menuType);
 
     return NextResponse.json(menuItems);
   } catch (error) {

@@ -106,6 +106,10 @@ export default function RestaurantHoursDisplay() {
     if (day.isLunchService && day.lunchOpenTime && day.lunchCloseTime) {
       services.push(`Lunch: ${formatTime(day.lunchOpenTime)} - ${formatTime(day.lunchCloseTime)}`);
     }
+
+    if (day.isHappyHourService && day.happyHourOpenTime && day.happyHourCloseTime) {
+      services.push(`Happy Hour: ${formatTime(day.happyHourOpenTime)} - ${formatTime(day.happyHourCloseTime)}`);
+    }
     
     if (day.isDinnerService && day.dinnerOpenTime && day.dinnerCloseTime) {
       services.push(`Dinner: ${formatTime(day.dinnerOpenTime)} - ${formatTime(day.dinnerCloseTime)}`);
@@ -138,6 +142,9 @@ export default function RestaurantHoursDisplay() {
       isLunchService: normalizeBool(day1.isLunchService) === normalizeBool(day2.isLunchService),
       lunchOpenTime: normalizeTime(day1.lunchOpenTime) === normalizeTime(day2.lunchOpenTime),
       lunchCloseTime: normalizeTime(day1.lunchCloseTime) === normalizeTime(day2.lunchCloseTime),
+      isHappyHourService: normalizeBool(day1.isHappyHourService) === normalizeBool(day2.isHappyHourService),
+      happyHourOpenTime: normalizeTime(day1.happyHourOpenTime) === normalizeTime(day2.happyHourOpenTime),
+      happyHourCloseTime: normalizeTime(day1.happyHourCloseTime) === normalizeTime(day2.happyHourCloseTime),
       isDinnerService: normalizeBool(day1.isDinnerService) === normalizeBool(day2.isDinnerService),
       dinnerOpenTime: normalizeTime(day1.dinnerOpenTime) === normalizeTime(day2.dinnerOpenTime),
       dinnerCloseTime: normalizeTime(day1.dinnerCloseTime) === normalizeTime(day2.dinnerCloseTime)

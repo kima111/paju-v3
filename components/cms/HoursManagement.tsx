@@ -63,7 +63,7 @@ export default function HoursManagement() {
       <div>
         <h2 className="font-display text-3xl font-light mb-4">Restaurant Hours</h2>
         <p className="text-white/60 text-sm">
-          Configure your restaurant&apos;s operating hours for each service. Enable services and set specific times for breakfast, lunch, and dinner.
+          Configure your restaurant&apos;s operating hours for each service. Enable services and set specific times for breakfast, lunch, happy hour, and dinner.
         </p>
       </div>
 
@@ -95,6 +95,9 @@ export default function HoursManagement() {
                     {day.isLunchService && day.lunchOpenTime && day.lunchCloseTime && (
                       <div>Lunch: {formatTime(day.lunchOpenTime)} - {formatTime(day.lunchCloseTime)}</div>
                     )}
+                    {day.isHappyHourService && day.happyHourOpenTime && day.happyHourCloseTime && (
+                      <div>Happy Hour: {formatTime(day.happyHourOpenTime)} - {formatTime(day.happyHourCloseTime)}</div>
+                    )}
                     {day.isDinnerService && day.dinnerOpenTime && day.dinnerCloseTime && (
                       <div>Dinner: {formatTime(day.dinnerOpenTime)} - {formatTime(day.dinnerCloseTime)}</div>
                     )}
@@ -123,7 +126,10 @@ function HourRow({ day, onUpdate, isSaving }: HourRowProps) {
     breakfastCloseTime: day.breakfastCloseTime || '11:00',
     isLunchService: day.isLunchService,
     lunchOpenTime: day.lunchOpenTime || '11:00',
-    lunchCloseTime: day.lunchCloseTime || '15:00',
+    lunchCloseTime: day.lunchCloseTime || '14:00',
+    isHappyHourService: day.isHappyHourService,
+    happyHourOpenTime: day.happyHourOpenTime || '14:00',
+    happyHourCloseTime: day.happyHourCloseTime || '17:00',
     isDinnerService: day.isDinnerService,
     dinnerOpenTime: day.dinnerOpenTime || '17:00',
     dinnerCloseTime: day.dinnerCloseTime || '21:00',
@@ -138,11 +144,14 @@ function HourRow({ day, onUpdate, isSaving }: HourRowProps) {
       localState.breakfastOpenTime !== day.breakfastOpenTime ||
       localState.breakfastCloseTime !== day.breakfastCloseTime ||
       localState.isLunchService !== day.isLunchService ||
-      localState.lunchOpenTime !== day.lunchOpenTime ||
-      localState.lunchCloseTime !== day.lunchCloseTime ||
+      localState.lunchOpenTime !== (day.lunchOpenTime || '11:00') ||
+      localState.lunchCloseTime !== (day.lunchCloseTime || '14:00') ||
+      localState.isHappyHourService !== !!day.isHappyHourService ||
+      localState.happyHourOpenTime !== (day.happyHourOpenTime || '14:00') ||
+      localState.happyHourCloseTime !== (day.happyHourCloseTime || '17:00') ||
       localState.isDinnerService !== day.isDinnerService ||
-      localState.dinnerOpenTime !== day.dinnerOpenTime ||
-      localState.dinnerCloseTime !== day.dinnerCloseTime;
+      localState.dinnerOpenTime !== (day.dinnerOpenTime || '17:00') ||
+      localState.dinnerCloseTime !== (day.dinnerCloseTime || '21:00');
     
     setHasChanges(changed);
   }, [localState, day]);
@@ -162,6 +171,7 @@ function HourRow({ day, onUpdate, isSaving }: HourRowProps) {
     const times = [];
     if (localState.isBreakfastService) times.push(localState.breakfastOpenTime);
     if (localState.isLunchService) times.push(localState.lunchOpenTime);
+    if (localState.isHappyHourService) times.push(localState.happyHourOpenTime);
     if (localState.isDinnerService) times.push(localState.dinnerOpenTime);
     return times.sort()[0] || '09:00';
   };
@@ -170,6 +180,7 @@ function HourRow({ day, onUpdate, isSaving }: HourRowProps) {
     const times = [];
     if (localState.isBreakfastService) times.push(localState.breakfastCloseTime);
     if (localState.isLunchService) times.push(localState.lunchCloseTime);
+    if (localState.isHappyHourService) times.push(localState.happyHourCloseTime);
     if (localState.isDinnerService) times.push(localState.dinnerCloseTime);
     return times.sort().reverse()[0] || '17:00';
   };
@@ -182,7 +193,10 @@ function HourRow({ day, onUpdate, isSaving }: HourRowProps) {
       breakfastCloseTime: day.breakfastCloseTime || '11:00',
       isLunchService: day.isLunchService,
       lunchOpenTime: day.lunchOpenTime || '11:00',
-      lunchCloseTime: day.lunchCloseTime || '15:00',
+      lunchCloseTime: day.lunchCloseTime || '14:00',
+      isHappyHourService: day.isHappyHourService,
+      happyHourOpenTime: day.happyHourOpenTime || '14:00',
+      happyHourCloseTime: day.happyHourCloseTime || '17:00',
       isDinnerService: day.isDinnerService,
       dinnerOpenTime: day.dinnerOpenTime || '17:00',
       dinnerCloseTime: day.dinnerCloseTime || '21:00',
@@ -307,6 +321,48 @@ function HourRow({ day, onUpdate, isSaving }: HourRowProps) {
                       type="time"
                       value={localState.lunchCloseTime}
                       onChange={(e) => setLocalState({ ...localState, lunchCloseTime: e.target.value })}
+                      className="w-full px-3 py-2 bg-black border border-zinc-700 focus:border-white/30 focus:outline-none text-white text-sm"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Happy Hour Service */}
+            <div className="space-y-3">
+              <div className="flex items-center space-x-3">
+                <input
+                  id={`happy-hour-${day.id}`}
+                  type="checkbox"
+                  checked={!!localState.isHappyHourService}
+                  onChange={(e) => setLocalState({ ...localState, isHappyHourService: e.target.checked })}
+                  className="w-4 h-4 bg-zinc-800 border-zinc-600 rounded focus:ring-white/20"
+                />
+                <label htmlFor={`happy-hour-${day.id}`} className="text-sm font-medium text-white/90">
+                  Happy Hour Service
+                </label>
+              </div>
+              {localState.isHappyHourService && (
+                <div className="grid grid-cols-2 gap-4 ml-7">
+                  <div>
+                    <label className="block text-xs tracking-wider uppercase text-white/60 mb-2">
+                      Open
+                    </label>
+                    <input
+                      type="time"
+                      value={localState.happyHourOpenTime}
+                      onChange={(e) => setLocalState({ ...localState, happyHourOpenTime: e.target.value })}
+                      className="w-full px-3 py-2 bg-black border border-zinc-700 focus:border-white/30 focus:outline-none text-white text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs tracking-wider uppercase text-white/60 mb-2">
+                      Close
+                    </label>
+                    <input
+                      type="time"
+                      value={localState.happyHourCloseTime}
+                      onChange={(e) => setLocalState({ ...localState, happyHourCloseTime: e.target.value })}
                       className="w-full px-3 py-2 bg-black border border-zinc-700 focus:border-white/30 focus:outline-none text-white text-sm"
                     />
                   </div>

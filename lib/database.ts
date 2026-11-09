@@ -1,11 +1,45 @@
 // Local database simulation - in production, you'd use a real database
+
+export const MENU_TYPES = ['breakfast', 'lunch', 'happy-hour', 'dinner'] as const;
+export type MenuType = (typeof MENU_TYPES)[number];
+
+export const MENU_LABELS: Record<MenuType, string> = {
+  breakfast: 'Breakfast',
+  lunch: 'Lunch',
+  'happy-hour': 'Happy Hour',
+  dinner: 'Dinner',
+};
+
+export function isMenuType(value: string): value is MenuType {
+  return (MENU_TYPES as readonly string[]).includes(value);
+}
+
+export function menuTypeLabel(menuType: string): string {
+  if (isMenuType(menuType)) return MENU_LABELS[menuType];
+  return menuType.charAt(0).toUpperCase() + menuType.slice(1);
+}
+
+export function compareMenuTypes(a: string, b: string): number {
+  const rank = (menuType: string) => {
+    const index = MENU_TYPES.indexOf(menuType as MenuType);
+    // Unknown keys sort after the known service order, never before it.
+    return index === -1 ? MENU_TYPES.length : index;
+  };
+  return rank(a) - rank(b);
+}
+
+/** Stable public/CMS tab order: breakfast → lunch → happy-hour → dinner */
+export function sortMenuTypes<T extends string>(menuTypes: T[]): T[] {
+  return [...menuTypes].sort(compareMenuTypes);
+}
+
 export interface MenuItem {
   id: string;
   title: string;
   description: string;
   price: number;
   category: string;
-  menuType: 'breakfast' | 'lunch' | 'dinner';
+  menuType: MenuType;
   imageUrl?: string;
   isAvailable: boolean;
   displayOrder?: number;
@@ -16,14 +50,14 @@ export interface MenuItem {
 export interface MenuCategory {
   id: string;
   name: string;
-  menuType: 'breakfast' | 'lunch' | 'dinner';
+  menuType: MenuType;
   displayOrder: number;
   createdAt: Date;
 }
 
 export interface MenuStatus {
   id: string;
-  menuType: 'breakfast' | 'lunch' | 'dinner';
+  menuType: MenuType;
   isEnabled: boolean;
   updatedAt: Date;
 }
@@ -39,6 +73,10 @@ export interface RestaurantHours {
   isLunchService: boolean;
   lunchOpenTime?: string;
   lunchCloseTime?: string;
+  // Happy hour service hours
+  isHappyHourService: boolean;
+  happyHourOpenTime?: string;
+  happyHourCloseTime?: string;
   // Dinner service hours
   isDinnerService: boolean;
   dinnerOpenTime?: string;
@@ -68,6 +106,32 @@ export interface Announcement {
   priority: 'low' | 'medium' | 'high';
   startDate?: Date;
   endDate?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Accolade {
+  id: string;
+  title: string;
+  description: string;
+  link?: string;
+  images: string[];
+  displayOrder: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ChefBio {
+  id: string;
+  name: string;
+  role: string;
+  title: string;
+  quote: string;
+  bio: string;
+  imageUrl: string;
+  displayOrder: number;
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -212,6 +276,249 @@ const menuItems: MenuItem[] = [
     isAvailable: true,
     createdAt: new Date(),
     updatedAt: new Date()
+  },
+  // Happy hour — shareable plates and drinks served between lunch and dinner
+  {
+    id: '13',
+    title: 'Cucumber Salad',
+    description: 'Eggplant, Sesame Dressing',
+    price: 7,
+    category: 'Small Plates',
+    menuType: 'happy-hour',
+    isAvailable: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: '14',
+    title: 'Little Gem (2 pc.)',
+    description: 'Pistachio Cream, Parmesan, Crown Daisy',
+    price: 12,
+    category: 'Small Plates',
+    menuType: 'happy-hour',
+    isAvailable: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: '15',
+    title: 'Chicken Wings (6 pc.)',
+    description: 'Sweet Chili, Soy Garlic, or Plain',
+    price: 12,
+    category: 'Small Plates',
+    menuType: 'happy-hour',
+    isAvailable: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: '16',
+    title: 'Chips & Dip',
+    description: 'Salmon Rillette, Meyer Lemon, Kakdugi',
+    price: 15,
+    category: 'Small Plates',
+    menuType: 'happy-hour',
+    isAvailable: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: '17',
+    title: 'Cauliflower',
+    description: 'Almond, Sesame Seed, Mint',
+    price: 15,
+    category: 'Small Plates',
+    menuType: 'happy-hour',
+    isAvailable: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: '18',
+    title: 'Mushroom',
+    description: 'Parmesan, White Kimchi, Truffle Aioli',
+    price: 18,
+    category: 'Small Plates',
+    menuType: 'happy-hour',
+    isAvailable: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: '19',
+    title: 'Gochujang Margarita',
+    description: 'Tequila, Lemongrass Mezcal, Curaçao, Gochujang, Honey, Lime',
+    price: 14,
+    category: 'Cocktails',
+    menuType: 'happy-hour',
+    isAvailable: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: '20',
+    title: 'Plum Luck',
+    description: 'Vodka, Aperol, Green Plum, Lemon',
+    price: 14,
+    category: 'Cocktails',
+    menuType: 'happy-hour',
+    isAvailable: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: '21',
+    title: 'Sesame Negroni',
+    description: 'Sesame-Washed Gin, Cocci Americano, Gentian Liquor, Ginseng',
+    price: 15,
+    category: 'Cocktails',
+    menuType: 'happy-hour',
+    isAvailable: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: '22',
+    title: 'Paju Vesper',
+    description: 'Gin, Omija Soju, House Vermouth Blend, Orange Bitters',
+    price: 15,
+    category: 'Cocktails',
+    menuType: 'happy-hour',
+    isAvailable: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: '23',
+    title: 'Terra',
+    description: 'Korean lager',
+    price: 6,
+    category: 'Beer, Wine & Rice Wine',
+    menuType: 'happy-hour',
+    isAvailable: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: '24',
+    title: "No Boat 'Bia Hoi' Lager",
+    description: 'Draft lager',
+    price: 8,
+    category: 'Beer, Wine & Rice Wine',
+    menuType: 'happy-hour',
+    isAvailable: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: '25',
+    title: "No Boat 'Farmer Soldier' Pilsner",
+    description: 'Draft pilsner',
+    price: 8,
+    category: 'Beer, Wine & Rice Wine',
+    menuType: 'happy-hour',
+    isAvailable: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: '26',
+    title: "No Boat 'Mozzie' IPA",
+    description: 'Draft IPA',
+    price: 8,
+    category: 'Beer, Wine & Rice Wine',
+    menuType: 'happy-hour',
+    isAvailable: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: '27',
+    title: 'Kook Soon Dang Makgeolli',
+    description: 'Unfiltered rice wine, Korea',
+    price: 7,
+    category: 'Beer, Wine & Rice Wine',
+    menuType: 'happy-hour',
+    isAvailable: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: '28',
+    title: '2024 Bargemone Rosé',
+    description: 'Grenache, Cabernet Sauvignon, Cinsault - Provence, France',
+    price: 11,
+    category: 'Beer, Wine & Rice Wine',
+    menuType: 'happy-hour',
+    isAvailable: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: '29',
+    title: '2024 Auntsfield',
+    description: 'Sauvignon Blanc - Marlborough, New Zealand',
+    price: 12,
+    category: 'Beer, Wine & Rice Wine',
+    menuType: 'happy-hour',
+    isAvailable: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: '30',
+    title: '2023 Domaine Jean-Michel Dupré',
+    description: 'Gamay Noir - Beaujolais, France',
+    price: 13,
+    category: 'Beer, Wine & Rice Wine',
+    menuType: 'happy-hour',
+    isAvailable: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: '31',
+    title: 'Soda',
+    description: 'Coke, Diet Coke, Sprite, Ginger Beer',
+    price: 4,
+    category: 'Zero-Proof',
+    menuType: 'happy-hour',
+    isAvailable: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: '32',
+    title: 'Seasonal Shrub',
+    description: 'House shrub, served chilled',
+    price: 8,
+    category: 'Zero-Proof',
+    menuType: 'happy-hour',
+    isAvailable: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: '33',
+    title: 'Barley Palmer',
+    description: 'Boricha Tea, Yuja, Sparkling Water',
+    price: 10,
+    category: 'Zero-Proof',
+    menuType: 'happy-hour',
+    isAvailable: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: '34',
+    title: 'Honey Bee',
+    description: 'Lemon, Honey, Ginger, Tonic',
+    price: 10,
+    category: 'Zero-Proof',
+    menuType: 'happy-hour',
+    isAvailable: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
   }
 ];
 
@@ -225,6 +532,9 @@ const restaurantHours: RestaurantHours[] = [
     isLunchService: true,
     lunchOpenTime: '11:00',
     lunchCloseTime: '15:00',
+    isHappyHourService: true,
+    happyHourOpenTime: '14:00',
+    happyHourCloseTime: '17:00',
     isDinnerService: true,
     dinnerOpenTime: '17:00',
     dinnerCloseTime: '21:00',
@@ -240,6 +550,9 @@ const restaurantHours: RestaurantHours[] = [
     isLunchService: true,
     lunchOpenTime: '11:00',
     lunchCloseTime: '15:00',
+    isHappyHourService: true,
+    happyHourOpenTime: '14:00',
+    happyHourCloseTime: '17:00',
     isDinnerService: true,
     dinnerOpenTime: '17:00',
     dinnerCloseTime: '21:00',
@@ -255,6 +568,9 @@ const restaurantHours: RestaurantHours[] = [
     isLunchService: true,
     lunchOpenTime: '11:00',
     lunchCloseTime: '15:00',
+    isHappyHourService: true,
+    happyHourOpenTime: '14:00',
+    happyHourCloseTime: '17:00',
     isDinnerService: true,
     dinnerOpenTime: '17:00',
     dinnerCloseTime: '21:00',
@@ -270,6 +586,9 @@ const restaurantHours: RestaurantHours[] = [
     isLunchService: true,
     lunchOpenTime: '11:00',
     lunchCloseTime: '15:00',
+    isHappyHourService: true,
+    happyHourOpenTime: '14:00',
+    happyHourCloseTime: '17:00',
     isDinnerService: true,
     dinnerOpenTime: '17:00',
     dinnerCloseTime: '21:00',
@@ -285,6 +604,9 @@ const restaurantHours: RestaurantHours[] = [
     isLunchService: true,
     lunchOpenTime: '11:00',
     lunchCloseTime: '15:00',
+    isHappyHourService: true,
+    happyHourOpenTime: '14:00',
+    happyHourCloseTime: '17:00',
     isDinnerService: true,
     dinnerOpenTime: '17:00',
     dinnerCloseTime: '22:00',
@@ -302,6 +624,9 @@ const restaurantHours: RestaurantHours[] = [
     isLunchService: true,
     lunchOpenTime: '11:00',
     lunchCloseTime: '15:00',
+    isHappyHourService: true,
+    happyHourOpenTime: '14:00',
+    happyHourCloseTime: '17:00',
     isDinnerService: true,
     dinnerOpenTime: '17:00',
     dinnerCloseTime: '22:00',
@@ -312,13 +637,16 @@ const restaurantHours: RestaurantHours[] = [
     id: '7',
     dayOfWeek: 'Sunday',
     openTime: '09:00',
-    closeTime: '15:00',
+    closeTime: '17:00',
     isBreakfastService: true,
     breakfastOpenTime: '09:00',
     breakfastCloseTime: '12:00',
     isLunchService: true,
     lunchOpenTime: '12:00',
     lunchCloseTime: '15:00',
+    isHappyHourService: true,
+    happyHourOpenTime: '14:00',
+    happyHourCloseTime: '17:00',
     isDinnerService: false,
     isClosed: false,
     updatedAt: new Date()
@@ -404,6 +732,34 @@ const menuCategories: MenuCategory[] = [
     menuType: 'breakfast',
     displayOrder: 3,
     createdAt: new Date()
+  },
+  {
+    id: '12',
+    name: 'Small Plates',
+    menuType: 'happy-hour',
+    displayOrder: 1,
+    createdAt: new Date()
+  },
+  {
+    id: '13',
+    name: 'Cocktails',
+    menuType: 'happy-hour',
+    displayOrder: 2,
+    createdAt: new Date()
+  },
+  {
+    id: '14',
+    name: 'Beer, Wine & Rice Wine',
+    menuType: 'happy-hour',
+    displayOrder: 3,
+    createdAt: new Date()
+  },
+  {
+    id: '15',
+    name: 'Zero-Proof',
+    menuType: 'happy-hour',
+    displayOrder: 4,
+    createdAt: new Date()
   }
 ];
 
@@ -418,6 +774,12 @@ const menuStatus: MenuStatus[] = [
   {
     id: '2',
     menuType: 'lunch',
+    isEnabled: true,
+    updatedAt: new Date()
+  },
+  {
+    id: '4',
+    menuType: 'happy-hour',
     isEnabled: true,
     updatedAt: new Date()
   },
@@ -445,10 +807,16 @@ const users: User[] = [
 // Announcements storage
 const announcements: Announcement[] = [];
 
+// Accolades storage
+const accolades: Accolade[] = [];
+
+// Chef bios storage
+const chefBios: ChefBio[] = [];
+
 // Database operations
 export const db = {
   // Menu Items
-  getMenuItems: (menuType?: 'breakfast' | 'lunch' | 'dinner') => {
+  getMenuItems: (menuType?: MenuType) => {
     const list = menuType ? menuItems.filter(item => item.menuType === menuType) : menuItems;
     return [...list].sort((a, b) => {
       const ao = a.displayOrder ?? Number.MAX_SAFE_INTEGER;
@@ -500,7 +868,7 @@ export const db = {
     return null;
   },
 
-  reorderMenuItems: (menuType: 'breakfast' | 'lunch' | 'dinner', category: string, orderedIds: string[]) => {
+  reorderMenuItems: (menuType: MenuType, category: string, orderedIds: string[]) => {
     const target = menuItems.filter(mi => mi.menuType === menuType && mi.category === category);
     const map = new Map(target.map(i => [i.id, i] as const));
     orderedIds.forEach((id, idx) => {
@@ -512,7 +880,7 @@ export const db = {
       .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
   },
 
-  renameCategoryInItems: (menuType: 'breakfast' | 'lunch' | 'dinner', oldName: string, newName: string) => {
+  renameCategoryInItems: (menuType: MenuType, oldName: string, newName: string) => {
     let count = 0;
     menuItems.forEach(mi => {
       if (mi.menuType === menuType && mi.category === oldName) {
@@ -643,8 +1011,114 @@ export const db = {
     return null;
   },
 
+  // Accolades
+  getAccolades: () => {
+    return [...accolades].sort((a, b) => {
+      if (a.displayOrder !== b.displayOrder) return a.displayOrder - b.displayOrder;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  },
+
+  getActiveAccolades: () => {
+    return accolades
+      .filter((accolade) => accolade.isActive)
+      .sort((a, b) => {
+        if (a.displayOrder !== b.displayOrder) return a.displayOrder - b.displayOrder;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+  },
+
+  createAccolade: (accoladeData: Omit<Accolade, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const nextOrder =
+      accolades.length > 0
+        ? Math.max(...accolades.map((a) => a.displayOrder || 0)) + 1
+        : 1;
+    const newAccolade: Accolade = {
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      ...accoladeData,
+      displayOrder: accoladeData.displayOrder ?? nextOrder,
+      images: accoladeData.images || [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    accolades.push(newAccolade);
+    return newAccolade;
+  },
+
+  updateAccolade: (id: string, updates: Partial<Omit<Accolade, 'id' | 'createdAt'>>) => {
+    const index = accolades.findIndex((accolade) => accolade.id === id);
+    if (index !== -1) {
+      accolades[index] = { ...accolades[index], ...updates, updatedAt: new Date() };
+      return accolades[index];
+    }
+    return null;
+  },
+
+  deleteAccolade: (id: string) => {
+    const index = accolades.findIndex((accolade) => accolade.id === id);
+    if (index !== -1) {
+      return accolades.splice(index, 1)[0];
+    }
+    return null;
+  },
+
+  // Chef Bios
+  getChefBios: () => {
+    return [...chefBios].sort((a, b) => {
+      if (a.displayOrder !== b.displayOrder) return a.displayOrder - b.displayOrder;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  },
+
+  getActiveChefBios: () => {
+    return chefBios
+      .filter((chef) => chef.isActive)
+      .sort((a, b) => {
+        if (a.displayOrder !== b.displayOrder) return a.displayOrder - b.displayOrder;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+  },
+
+  createChefBio: (chefData: Omit<ChefBio, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const nextOrder =
+      chefBios.length > 0
+        ? Math.max(...chefBios.map((c) => c.displayOrder || 0)) + 1
+        : 1;
+    const newChefBio: ChefBio = {
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      ...chefData,
+      displayOrder: chefData.displayOrder ?? nextOrder,
+      role: chefData.role || '',
+      title: chefData.title || '',
+      quote: chefData.quote || '',
+      bio: chefData.bio || '',
+      imageUrl: chefData.imageUrl || '',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    chefBios.push(newChefBio);
+    return newChefBio;
+  },
+
+  updateChefBio: (id: string, updates: Partial<Omit<ChefBio, 'id' | 'createdAt'>>) => {
+    const index = chefBios.findIndex((chef) => chef.id === id);
+    if (index !== -1) {
+      chefBios[index] = { ...chefBios[index], ...updates, updatedAt: new Date() };
+      return chefBios[index];
+    }
+    return null;
+  },
+
+  deleteChefBio: (id: string) => {
+    const index = chefBios.findIndex((chef) => chef.id === id);
+    if (index !== -1) {
+      return chefBios.splice(index, 1)[0];
+    }
+    return null;
+  },
+
   // Menu Categories
-  getMenuCategories: (menuType?: 'breakfast' | 'lunch' | 'dinner') => {
+  getMenuCategories: (menuType?: MenuType) => {
     const filtered = menuType ? menuCategories.filter(cat => cat.menuType === menuType) : menuCategories;
     return filtered.sort((a, b) => a.displayOrder - b.displayOrder);
   },
@@ -677,7 +1151,7 @@ export const db = {
     return null;
   },
 
-  reorderMenuCategories: (menuType: 'breakfast' | 'lunch' | 'dinner', orderedIds: string[]) => {
+  reorderMenuCategories: (menuType: MenuType, orderedIds: string[]) => {
     // Ensure only categories of the given menuType are affected
     const target = menuCategories.filter(cat => cat.menuType === menuType);
     // Map id -> category for quick access
@@ -700,7 +1174,7 @@ export function getMenuStatuses(): MenuStatus[] {
   return [...menuStatus];
 }
 
-export function updateMenuStatus(menuType: 'breakfast' | 'lunch' | 'dinner', isEnabled: boolean): MenuStatus[] {
+export function updateMenuStatus(menuType: MenuType, isEnabled: boolean): MenuStatus[] {
   const status = menuStatus.find(s => s.menuType === menuType);
   if (status) {
     status.isEnabled = isEnabled;

@@ -5,6 +5,8 @@ import MenuSection from "../components/MenuSection";
 import RestaurantHoursDisplay from "../components/RestaurantHoursDisplay";
 import AnnouncementBanner from "../components/AnnouncementBanner";
 import AnnouncementSpacer from "../components/AnnouncementSpacer";
+import AccoladesSection from "../components/AccoladesSection";
+import ChefSection from "../components/ChefSection";
 import Image from "next/image";
 
 export default function Home() {
@@ -26,6 +28,7 @@ export default function Home() {
               <a href="#home" className="text-white/70 hover:text-white transition-all duration-300">Experience</a>
               <a href="#menu" className="text-white/70 hover:text-white transition-all duration-300">Menu</a>
               <a href="#chef" className="text-white/70 hover:text-white transition-all duration-300">Chef</a>
+              <a href="#accolades" className="text-white/70 hover:text-white transition-all duration-300">Accolades</a>
               <a href="#contact" className="text-white/70 hover:text-white transition-all duration-300">Reserve</a>
             </div>
 
@@ -47,6 +50,7 @@ export default function Home() {
             <a href="#home" onClick={toggleMenu} className="block text-white/70 hover:text-white transition-colors text-xs tracking-wider uppercase">Experience</a>
             <a href="#menu" onClick={toggleMenu} className="block text-white/70 hover:text-white transition-colors text-xs tracking-wider uppercase">Menu</a>
             <a href="#chef" onClick={toggleMenu} className="block text-white/70 hover:text-white transition-colors text-xs tracking-wider uppercase">Chef</a>
+            <a href="#accolades" onClick={toggleMenu} className="block text-white/70 hover:text-white transition-colors text-xs tracking-wider uppercase">Accolades</a>
             <a href="#contact" onClick={toggleMenu} className="block text-white/70 hover:text-white transition-colors text-xs tracking-wider uppercase">Reserve</a>
           </div>
         </div>
@@ -130,39 +134,11 @@ export default function Home() {
       {/* Dynamic Menu Section */}
       <MenuSection />
 
-      {/* Chef Section - Personal and authentic */}
-      <section id="chef" className="py-32 px-6 bg-zinc-950/30">
-        <div className="max-w-5xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-16 items-center">
-            <div className="relative order-2 md:order-1">
-              <div className="aspect-[1] bg-zinc-900 rounded-sm overflow-hidden">
-                <Image
-                  src="/images/Executive_Chef_Bill.png"
-                  alt="Executive Chef Bill"
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-700 opacity-85 group-hover:opacity-100"
-                />
-              </div>
-            </div>
-            <div className="space-y-10 order-1 md:order-2">
-              <div>
-                <div className="text-xs tracking-[0.3em] uppercase text-white/60 mb-6">Executive Chef</div>
-                <h2 className="font-display text-4xl md:text-5xl font-light mb-10">
-                  Culinary Vision
-                </h2>
-              </div>
-              <div className="space-y-8 text-white/70 leading-loose">
-                <p>
-                  &ldquo;Korean cuisine is about balance—the harmony between flavors, textures, and colors. At Paju, we honor these principles while celebrating the incredible ingredients of the Pacific Northwest.&rdquo;
-                </p>
-                <p>
-                  Our chef brings years of experience from Seattle&rsquo;s to New York&rsquo;s finest restaurants, combining traditional techniques with innovative approaches to create an unforgettable dining experience.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Chef Section - managed via CMS with fallback */}
+      <ChefSection />
+
+      {/* Accolades */}
+      <AccoladesSection />
 
       {/* Contact/Reserve - Minimal and focused */}
       <section id="contact" className="py-32 px-6">
@@ -181,7 +157,34 @@ export default function Home() {
           <div className="grid md:grid-cols-3 gap-16 mb-20 text-center">
             <div className="space-y-4">
               <div className="text-xs tracking-[0.3em] uppercase text-white/60">Location</div>
-              <p className="text-white/80 leading-relaxed">Seattle, Washington<br />513 Westlake Avenue North Seattle, WA 98109</p>
+              <a
+                href="https://www.google.com/maps/search/?api=1&query=513+Westlake+Avenue+North%2C+Seattle%2C+WA+98109"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block text-white/80 leading-relaxed hover:text-white hover:underline underline-offset-4 transition-colors duration-300"
+              >
+                Seattle, Washington<br />
+                513 Westlake Avenue North<br />
+                Seattle, WA 98109
+              </a>
+              <div className="pt-4 space-y-3">
+                <div className="text-xs tracking-[0.3em] uppercase text-white/60">Parking</div>
+                <p className="text-white/70 text-sm leading-relaxed">
+                  Enjoy complimentary parking while you dine with us for dinner and happy hour
+                </p>
+                <p className="text-white/60 text-sm leading-relaxed">
+                  Entrance via 9th Alley N.
+                </p>
+                <div className="relative mx-auto mt-2 w-full max-w-[180px] aspect-[3/4] bg-zinc-900 rounded-sm overflow-hidden">
+                  <Image
+                    src="/images/parking-map.jpg"
+                    alt="Parking map showing entrance via 9th Alley N"
+                    fill
+                    className="object-cover"
+                    sizes="180px"
+                  />
+                </div>
+              </div>
             </div>
             <RestaurantHoursDisplay />
             <div className="space-y-4">
@@ -206,6 +209,23 @@ export default function Home() {
             <p className="text-white/30 text-xs leading-relaxed">
               © 2024 Paju Restaurant. Contemporary Korean Cuisine.
             </p>
+            <a
+              href="https://www.instagram.com/paju_seattle"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Instagram"
+              className="text-white/30 hover:text-white/50 transition-colors"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="w-4 h-4"
+                aria-hidden="true"
+              >
+                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" />
+              </svg>
+            </a>
             <a 
               href="/cms" 
               className="text-white/20 text-xs hover:text-white/40 transition-colors"

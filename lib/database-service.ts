@@ -1,5 +1,5 @@
 import { sql } from '@vercel/postgres';
-import type { MenuItem, MenuCategory, RestaurantHours, MenuStatus, User, Announcement } from './database';
+import { compareMenuTypes, type MenuItem, type MenuCategory, type MenuType, type RestaurantHours, type MenuStatus, type User, type Announcement, type Accolade, type ChefBio } from './database';
 
 // Configure database connection for Neon (map env vars in all environments)
 // This lets local dev connect to Neon/Postgres when desired.
@@ -20,7 +20,7 @@ let devDB: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   db?: any;
   getMenuStatuses?: () => MenuStatus[];
-  updateMenuStatus?: (menuType: 'breakfast' | 'lunch' | 'dinner', isEnabled: boolean) => MenuStatus[];
+  updateMenuStatus?: (menuType: MenuType, isEnabled: boolean) => MenuStatus[];
 } | null = null;
 
 // Initialize development database synchronously
@@ -44,6 +44,134 @@ function initDevDB() {
     }
   }
   return devDB;
+}
+
+function clockTime(value: unknown): string | undefined {
+  if (value == null || value === '') return undefined;
+  const match = String(value).match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return String(value);
+  return `${match[1].padStart(2, '0')}:${match[2]}`;
+}
+
+const HAPPY_HOUR_CATEGORIES = [
+  { name: 'Small Plates', displayOrder: 1 },
+  { name: 'Cocktails', displayOrder: 2 },
+  { name: 'Beer, Wine & Rice Wine', displayOrder: 3 },
+  { name: 'Zero-Proof', displayOrder: 4 }
+] as const;
+
+const HAPPY_HOUR_ITEMS: { title: string; description: string; price: number; category: string }[] = [
+  { title: 'Cucumber Salad', description: 'Eggplant, Sesame Dressing', price: 7, category: 'Small Plates' },
+  { title: 'Little Gem (2 pc.)', description: 'Pistachio Cream, Parmesan, Crown Daisy', price: 12, category: 'Small Plates' },
+  { title: 'Chicken Wings (6 pc.)', description: 'Sweet Chili, Soy Garlic, or Plain', price: 12, category: 'Small Plates' },
+  { title: 'Chips & Dip', description: 'Salmon Rillette, Meyer Lemon, Kakdugi', price: 15, category: 'Small Plates' },
+  { title: 'Cauliflower', description: 'Almond, Sesame Seed, Mint', price: 15, category: 'Small Plates' },
+  { title: 'Mushroom', description: 'Parmesan, White Kimchi, Truffle Aioli', price: 18, category: 'Small Plates' },
+  { title: 'Gochujang Margarita', description: 'Tequila, Lemongrass Mezcal, Curaçao, Gochujang, Honey, Lime', price: 14, category: 'Cocktails' },
+  { title: 'Plum Luck', description: 'Vodka, Aperol, Green Plum, Lemon', price: 14, category: 'Cocktails' },
+  { title: 'Sesame Negroni', description: 'Sesame-Washed Gin, Cocci Americano, Gentian Liquor, Ginseng', price: 15, category: 'Cocktails' },
+  { title: 'Paju Vesper', description: 'Gin, Omija Soju, House Vermouth Blend, Orange Bitters', price: 15, category: 'Cocktails' },
+  { title: 'Terra', description: 'Korean lager', price: 6, category: 'Beer, Wine & Rice Wine' },
+  { title: "No Boat 'Bia Hoi' Lager", description: 'Draft lager', price: 8, category: 'Beer, Wine & Rice Wine' },
+  { title: "No Boat 'Farmer Soldier' Pilsner", description: 'Draft pilsner', price: 8, category: 'Beer, Wine & Rice Wine' },
+  { title: "No Boat 'Mozzie' IPA", description: 'Draft IPA', price: 8, category: 'Beer, Wine & Rice Wine' },
+  { title: 'Kook Soon Dang Makgeolli', description: 'Unfiltered rice wine, Korea', price: 7, category: 'Beer, Wine & Rice Wine' },
+  { title: '2024 Bargemone Rosé', description: 'Grenache, Cabernet Sauvignon, Cinsault - Provence, France', price: 11, category: 'Beer, Wine & Rice Wine' },
+  { title: '2024 Auntsfield', description: 'Sauvignon Blanc - Marlborough, New Zealand', price: 12, category: 'Beer, Wine & Rice Wine' },
+  { title: '2023 Domaine Jean-Michel Dupré', description: 'Gamay Noir - Beaujolais, France', price: 13, category: 'Beer, Wine & Rice Wine' },
+  { title: 'Soda', description: 'Coke, Diet Coke, Sprite, Ginger Beer', price: 4, category: 'Zero-Proof' },
+  { title: 'Seasonal Shrub', description: 'House shrub, served chilled', price: 8, category: 'Zero-Proof' },
+  { title: 'Barley Palmer', description: 'Boricha Tea, Yuja, Sparkling Water', price: 10, category: 'Zero-Proof' },
+  { title: 'Honey Bee', description: 'Lemon, Honey, Ginger, Tonic', price: 10, category: 'Zero-Proof' }
+];
+
+let happyHourReady: Promise<void> | null = null;
+
+export async function ensureHappyHourSupport(): Promise<void> {
+  if (process.env.NODE_ENV !== 'production' && process.env.USE_DEV_DB !== 'false') {
+    return;
+  }
+  if (!happyHourReady) {
+    happyHourReady = applyHappyHourSupport().catch((error) => {
+      happyHourReady = null;
+      throw error;
+    });
+  }
+  return happyHourReady;
+}
+
+async function applyHappyHourSupport(): Promise<void> {
+  await sql`ALTER TABLE menu_items DROP CONSTRAINT IF EXISTS menu_items_menu_type_check`;
+  await sql`ALTER TABLE menu_items ADD CONSTRAINT menu_items_menu_type_check CHECK (menu_type IN ('breakfast', 'lunch', 'happy-hour', 'dinner'))`;
+  await sql`ALTER TABLE menu_categories DROP CONSTRAINT IF EXISTS menu_categories_menu_type_check`;
+  await sql`ALTER TABLE menu_categories ADD CONSTRAINT menu_categories_menu_type_check CHECK (menu_type IN ('breakfast', 'lunch', 'happy-hour', 'dinner'))`;
+  await sql`ALTER TABLE menu_status DROP CONSTRAINT IF EXISTS menu_status_menu_type_check`;
+  await sql`ALTER TABLE menu_status ADD CONSTRAINT menu_status_menu_type_check CHECK (menu_type IN ('breakfast', 'lunch', 'happy-hour', 'dinner'))`;
+
+  await sql`
+    INSERT INTO menu_status (menu_type, is_enabled)
+    VALUES ('happy-hour', true)
+    ON CONFLICT (menu_type) DO NOTHING
+  `;
+
+  await sql`ALTER TABLE restaurant_hours ADD COLUMN IF NOT EXISTS is_happy_hour_service BOOLEAN DEFAULT false`;
+  await sql`ALTER TABLE restaurant_hours ADD COLUMN IF NOT EXISTS happy_hour_open_time TIME`;
+  await sql`ALTER TABLE restaurant_hours ADD COLUMN IF NOT EXISTS happy_hour_close_time TIME`;
+  await sql`
+    UPDATE restaurant_hours
+    SET is_happy_hour_service = true,
+        happy_hour_open_time = '14:00',
+        happy_hour_close_time = '17:00'
+    WHERE happy_hour_open_time IS NULL
+      AND happy_hour_close_time IS NULL
+  `;
+
+  for (const category of HAPPY_HOUR_CATEGORIES) {
+    await sql`
+      INSERT INTO menu_categories (name, menu_type, display_order)
+      SELECT ${category.name}, 'happy-hour', ${category.displayOrder}
+      WHERE NOT EXISTS (
+        SELECT 1 FROM menu_categories
+        WHERE menu_type = 'happy-hour' AND name = ${category.name}
+      )
+    `;
+  }
+
+  const existing = await sql`SELECT COUNT(*)::int AS count FROM menu_items WHERE menu_type = 'happy-hour'`;
+  if (Number(existing.rows[0]?.count || 0) > 0) return;
+
+  const orderByCategory = new Map<string, number>();
+  for (const item of HAPPY_HOUR_ITEMS) {
+    const displayOrder = (orderByCategory.get(item.category) || 0) + 1;
+    orderByCategory.set(item.category, displayOrder);
+    await sql`
+      INSERT INTO menu_items (title, description, price, category, menu_type, is_available, display_order)
+      VALUES (${item.title}, ${item.description}, ${item.price}, ${item.category}, 'happy-hour', true, ${displayOrder})
+    `;
+  }
+}
+
+function mapRestaurantHours(row: Record<string, unknown>): RestaurantHours {
+  return {
+    id: String(row.id),
+    dayOfWeek: String(row.day_of_week),
+    openTime: clockTime(row.open_time) || '',
+    closeTime: clockTime(row.close_time) || '',
+    isBreakfastService: Boolean(row.is_breakfast_service),
+    breakfastOpenTime: clockTime(row.breakfast_open_time),
+    breakfastCloseTime: clockTime(row.breakfast_close_time),
+    isLunchService: Boolean(row.is_lunch_service),
+    lunchOpenTime: clockTime(row.lunch_open_time),
+    lunchCloseTime: clockTime(row.lunch_close_time),
+    isHappyHourService: Boolean(row.is_happy_hour_service),
+    happyHourOpenTime: clockTime(row.happy_hour_open_time),
+    happyHourCloseTime: clockTime(row.happy_hour_close_time),
+    isDinnerService: Boolean(row.is_dinner_service),
+    dinnerOpenTime: clockTime(row.dinner_open_time),
+    dinnerCloseTime: clockTime(row.dinner_close_time),
+    isClosed: Boolean(row.is_closed),
+    updatedAt: row.updated_at ? new Date(String(row.updated_at)) : new Date()
+  };
 }
 
 // Production Database Operations
@@ -322,14 +450,388 @@ export class DatabaseService {
     }
   }
 
+  // Accolades
+  private static mapAccoladeRow(row: {
+    id: string | number;
+    title: string;
+    description: string | null;
+    link: string | null;
+    images: string[] | string | null;
+    displayOrder: number | null;
+    isActive: boolean;
+    createdAt: Date | string;
+    updatedAt: Date | string;
+  }): Accolade {
+    let images: string[] = [];
+    if (Array.isArray(row.images)) {
+      images = row.images;
+    } else if (typeof row.images === 'string') {
+      try {
+        const parsed = JSON.parse(row.images);
+        images = Array.isArray(parsed) ? parsed : [];
+      } catch {
+        images = row.images ? [row.images] : [];
+      }
+    }
+
+    return {
+      id: String(row.id),
+      title: row.title,
+      description: row.description || '',
+      link: row.link || undefined,
+      images,
+      displayOrder: row.displayOrder ?? 0,
+      isActive: row.isActive,
+      createdAt: new Date(row.createdAt),
+      updatedAt: new Date(row.updatedAt),
+    };
+  }
+
+  static async getAccolades(): Promise<Accolade[]> {
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.getAccolades();
+    }
+
+    try {
+      const result = await sql`
+        SELECT id, title, description, link, images,
+               display_order as "displayOrder", is_active as "isActive",
+               created_at as "createdAt", updated_at as "updatedAt"
+        FROM accolades
+        ORDER BY display_order ASC, created_at DESC
+      `;
+      return result.rows.map((row) => this.mapAccoladeRow(row as Parameters<typeof DatabaseService.mapAccoladeRow>[0]));
+    } catch (error) {
+      console.error('Database error:', error);
+      return [];
+    }
+  }
+
+  static async getActiveAccolades(): Promise<Accolade[]> {
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.getActiveAccolades();
+    }
+
+    try {
+      const result = await sql`
+        SELECT id, title, description, link, images,
+               display_order as "displayOrder", is_active as "isActive",
+               created_at as "createdAt", updated_at as "updatedAt"
+        FROM accolades
+        WHERE is_active = true
+        ORDER BY display_order ASC, created_at DESC
+      `;
+      return result.rows.map((row) => this.mapAccoladeRow(row as Parameters<typeof DatabaseService.mapAccoladeRow>[0]));
+    } catch (error) {
+      console.error('Database error:', error);
+      return [];
+    }
+  }
+
+  static async createAccolade(accoladeData: Omit<Accolade, 'id' | 'createdAt' | 'updatedAt'>): Promise<Accolade | null> {
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.createAccolade(accoladeData);
+    }
+
+    try {
+      const imagesJson = JSON.stringify(accoladeData.images || []);
+      const result = await sql`
+        INSERT INTO accolades (title, description, link, images, display_order, is_active)
+        VALUES (
+          ${accoladeData.title},
+          ${accoladeData.description || ''},
+          ${accoladeData.link || null},
+          ${imagesJson}::jsonb,
+          ${accoladeData.displayOrder ?? 0},
+          ${accoladeData.isActive ?? true}
+        )
+        RETURNING id, title, description, link, images,
+                  display_order as "displayOrder", is_active as "isActive",
+                  created_at as "createdAt", updated_at as "updatedAt"
+      `;
+      return this.mapAccoladeRow(result.rows[0] as Parameters<typeof DatabaseService.mapAccoladeRow>[0]);
+    } catch (error) {
+      console.error('Database error:', error);
+      return null;
+    }
+  }
+
+  static async updateAccolade(id: string, updates: Partial<Omit<Accolade, 'id' | 'createdAt'>>): Promise<Accolade | null> {
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.updateAccolade(id, updates);
+    }
+
+    try {
+      let query = 'UPDATE accolades SET updated_at = NOW()';
+      const params: (string | boolean | number | null)[] = [id];
+      let paramIndex = 2;
+
+      if (updates.title !== undefined) {
+        query += `, title = $${paramIndex}`;
+        params.push(updates.title);
+        paramIndex++;
+      }
+      if (updates.description !== undefined) {
+        query += `, description = $${paramIndex}`;
+        params.push(updates.description);
+        paramIndex++;
+      }
+      if (updates.link !== undefined) {
+        query += `, link = $${paramIndex}`;
+        params.push(updates.link || null);
+        paramIndex++;
+      }
+      if (updates.images !== undefined) {
+        query += `, images = $${paramIndex}::jsonb`;
+        params.push(JSON.stringify(updates.images));
+        paramIndex++;
+      }
+      if (updates.displayOrder !== undefined) {
+        query += `, display_order = $${paramIndex}`;
+        params.push(updates.displayOrder);
+        paramIndex++;
+      }
+      if (updates.isActive !== undefined) {
+        query += `, is_active = $${paramIndex}`;
+        params.push(updates.isActive);
+        paramIndex++;
+      }
+
+      query += ' WHERE id = $1 RETURNING id, title, description, link, images, display_order as "displayOrder", is_active as "isActive", created_at as "createdAt", updated_at as "updatedAt"';
+
+      const result = await sql.query(query, params);
+      if (!result.rows[0]) return null;
+      return this.mapAccoladeRow(result.rows[0] as Parameters<typeof DatabaseService.mapAccoladeRow>[0]);
+    } catch (error) {
+      console.error('Database error:', error);
+      return null;
+    }
+  }
+
+  static async deleteAccolade(id: string): Promise<Accolade | null> {
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.deleteAccolade(id);
+    }
+
+    try {
+      const result = await sql`
+        DELETE FROM accolades WHERE id = ${id}
+        RETURNING id, title, description, link, images,
+                  display_order as "displayOrder", is_active as "isActive",
+                  created_at as "createdAt", updated_at as "updatedAt"
+      `;
+      if (!result.rows[0]) return null;
+      return this.mapAccoladeRow(result.rows[0] as Parameters<typeof DatabaseService.mapAccoladeRow>[0]);
+    } catch (error) {
+      console.error('Database error:', error);
+      return null;
+    }
+  }
+
+  // Chef Bios
+  private static mapChefBioRow(row: {
+    id: string | number;
+    name: string;
+    role: string | null;
+    title: string | null;
+    quote: string | null;
+    bio: string | null;
+    imageUrl: string | null;
+    displayOrder: number | null;
+    isActive: boolean;
+    createdAt: Date | string;
+    updatedAt: Date | string;
+  }): ChefBio {
+    return {
+      id: String(row.id),
+      name: row.name,
+      role: row.role || '',
+      title: row.title || '',
+      quote: row.quote || '',
+      bio: row.bio || '',
+      imageUrl: row.imageUrl || '',
+      displayOrder: row.displayOrder ?? 0,
+      isActive: row.isActive,
+      createdAt: new Date(row.createdAt),
+      updatedAt: new Date(row.updatedAt),
+    };
+  }
+
+  static async getChefBios(): Promise<ChefBio[]> {
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.getChefBios();
+    }
+
+    try {
+      const result = await sql`
+        SELECT id, name, role, title, quote, bio,
+               image_url as "imageUrl",
+               display_order as "displayOrder", is_active as "isActive",
+               created_at as "createdAt", updated_at as "updatedAt"
+        FROM chef_bios
+        ORDER BY display_order ASC, created_at DESC
+      `;
+      return result.rows.map((row) => this.mapChefBioRow(row as Parameters<typeof DatabaseService.mapChefBioRow>[0]));
+    } catch (error) {
+      console.error('Database error:', error);
+      return [];
+    }
+  }
+
+  static async getActiveChefBios(): Promise<ChefBio[]> {
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.getActiveChefBios();
+    }
+
+    try {
+      const result = await sql`
+        SELECT id, name, role, title, quote, bio,
+               image_url as "imageUrl",
+               display_order as "displayOrder", is_active as "isActive",
+               created_at as "createdAt", updated_at as "updatedAt"
+        FROM chef_bios
+        WHERE is_active = true
+        ORDER BY display_order ASC, created_at DESC
+      `;
+      return result.rows.map((row) => this.mapChefBioRow(row as Parameters<typeof DatabaseService.mapChefBioRow>[0]));
+    } catch (error) {
+      console.error('Database error:', error);
+      return [];
+    }
+  }
+
+  static async createChefBio(chefData: Omit<ChefBio, 'id' | 'createdAt' | 'updatedAt'>): Promise<ChefBio | null> {
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.createChefBio(chefData);
+    }
+
+    try {
+      const result = await sql`
+        INSERT INTO chef_bios (name, role, title, quote, bio, image_url, display_order, is_active)
+        VALUES (
+          ${chefData.name},
+          ${chefData.role || ''},
+          ${chefData.title || ''},
+          ${chefData.quote || ''},
+          ${chefData.bio || ''},
+          ${chefData.imageUrl || ''},
+          ${chefData.displayOrder ?? 0},
+          ${chefData.isActive ?? true}
+        )
+        RETURNING id, name, role, title, quote, bio,
+                  image_url as "imageUrl",
+                  display_order as "displayOrder", is_active as "isActive",
+                  created_at as "createdAt", updated_at as "updatedAt"
+      `;
+      return this.mapChefBioRow(result.rows[0] as Parameters<typeof DatabaseService.mapChefBioRow>[0]);
+    } catch (error) {
+      console.error('Database error:', error);
+      return null;
+    }
+  }
+
+  static async updateChefBio(id: string, updates: Partial<Omit<ChefBio, 'id' | 'createdAt'>>): Promise<ChefBio | null> {
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.updateChefBio(id, updates);
+    }
+
+    try {
+      let query = 'UPDATE chef_bios SET updated_at = NOW()';
+      const params: (string | boolean | number | null)[] = [id];
+      let paramIndex = 2;
+
+      if (updates.name !== undefined) {
+        query += `, name = $${paramIndex}`;
+        params.push(updates.name);
+        paramIndex++;
+      }
+      if (updates.role !== undefined) {
+        query += `, role = $${paramIndex}`;
+        params.push(updates.role);
+        paramIndex++;
+      }
+      if (updates.title !== undefined) {
+        query += `, title = $${paramIndex}`;
+        params.push(updates.title);
+        paramIndex++;
+      }
+      if (updates.quote !== undefined) {
+        query += `, quote = $${paramIndex}`;
+        params.push(updates.quote);
+        paramIndex++;
+      }
+      if (updates.bio !== undefined) {
+        query += `, bio = $${paramIndex}`;
+        params.push(updates.bio);
+        paramIndex++;
+      }
+      if (updates.imageUrl !== undefined) {
+        query += `, image_url = $${paramIndex}`;
+        params.push(updates.imageUrl);
+        paramIndex++;
+      }
+      if (updates.displayOrder !== undefined) {
+        query += `, display_order = $${paramIndex}`;
+        params.push(updates.displayOrder);
+        paramIndex++;
+      }
+      if (updates.isActive !== undefined) {
+        query += `, is_active = $${paramIndex}`;
+        params.push(updates.isActive);
+        paramIndex++;
+      }
+
+      query += ' WHERE id = $1 RETURNING id, name, role, title, quote, bio, image_url as "imageUrl", display_order as "displayOrder", is_active as "isActive", created_at as "createdAt", updated_at as "updatedAt"';
+
+      const result = await sql.query(query, params);
+      if (!result.rows[0]) return null;
+      return this.mapChefBioRow(result.rows[0] as Parameters<typeof DatabaseService.mapChefBioRow>[0]);
+    } catch (error) {
+      console.error('Database error:', error);
+      return null;
+    }
+  }
+
+  static async deleteChefBio(id: string): Promise<ChefBio | null> {
+    const devDatabase = initDevDB();
+    if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
+      return devDatabase.db.deleteChefBio(id);
+    }
+
+    try {
+      const result = await sql`
+        DELETE FROM chef_bios WHERE id = ${id}
+        RETURNING id, name, role, title, quote, bio,
+                  image_url as "imageUrl",
+                  display_order as "displayOrder", is_active as "isActive",
+                  created_at as "createdAt", updated_at as "updatedAt"
+      `;
+      if (!result.rows[0]) return null;
+      return this.mapChefBioRow(result.rows[0] as Parameters<typeof DatabaseService.mapChefBioRow>[0]);
+    } catch (error) {
+      console.error('Database error:', error);
+      return null;
+    }
+  }
+
   // Menu Items
-  static async getMenuItems(menuType?: 'breakfast' | 'lunch' | 'dinner'): Promise<MenuItem[]> {
+  static async getMenuItems(menuType?: MenuType): Promise<MenuItem[]> {
     const devDatabase = initDevDB();
     if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
       return devDatabase.db.getMenuItems(menuType);
     }
 
     try {
+      await ensureHappyHourSupport();
       const query = menuType 
         ? sql`SELECT * FROM menu_items WHERE menu_type = ${menuType} ORDER BY display_order NULLS LAST, created_at DESC`
         : sql`SELECT * FROM menu_items ORDER BY display_order NULLS LAST, created_at DESC`;
@@ -341,7 +843,7 @@ export class DatabaseService {
         description: row.description,
         price: parseFloat(row.price),
         category: row.category,
-        menuType: row.menu_type as 'breakfast' | 'lunch' | 'dinner',
+        menuType: row.menu_type as MenuType,
         imageUrl: row.image_url,
         isAvailable: row.is_available,
         displayOrder: row.display_order ?? undefined,
@@ -370,7 +872,7 @@ export class DatabaseService {
             description: row.description,
             price: parseFloat(row.price),
             category: row.category,
-            menuType: row.menu_type as 'breakfast' | 'lunch' | 'dinner',
+            menuType: row.menu_type as MenuType,
             imageUrl: row.image_url,
             isAvailable: row.is_available,
             displayOrder: row.display_order ?? undefined,
@@ -509,7 +1011,7 @@ export class DatabaseService {
   }
 
   static async reorderMenuItems(
-    menuType: 'breakfast' | 'lunch' | 'dinner',
+    menuType: MenuType,
     category: string,
     orderedIds: string[]
   ): Promise<MenuItem[]> {
@@ -530,7 +1032,7 @@ export class DatabaseService {
         description: row.description,
         price: parseFloat(row.price),
         category: row.category,
-        menuType: row.menu_type as 'breakfast' | 'lunch' | 'dinner',
+        menuType: row.menu_type as MenuType,
         imageUrl: row.image_url,
         isAvailable: row.is_available,
         displayOrder: row.display_order ?? undefined,
@@ -544,13 +1046,14 @@ export class DatabaseService {
   }
 
   // Menu Categories
-  static async getMenuCategories(menuType?: 'breakfast' | 'lunch' | 'dinner'): Promise<MenuCategory[]> {
+  static async getMenuCategories(menuType?: MenuType): Promise<MenuCategory[]> {
     const devDatabase = initDevDB();
     if (process.env.NODE_ENV !== 'production' && devDatabase?.db) {
       return devDatabase.db.getMenuCategories(menuType);
     }
 
     try {
+      await ensureHappyHourSupport();
       const query = menuType
         ? sql`SELECT * FROM menu_categories WHERE menu_type = ${menuType} ORDER BY display_order`
         : sql`SELECT * FROM menu_categories ORDER BY display_order`;
@@ -559,7 +1062,7 @@ export class DatabaseService {
       return result.rows.map(row => ({
         id: row.id.toString(),
         name: row.name,
-        menuType: row.menu_type as 'breakfast' | 'lunch' | 'dinner',
+        menuType: row.menu_type as MenuType,
         displayOrder: row.display_order,
         createdAt: new Date(row.created_at)
       }));
@@ -654,7 +1157,7 @@ export class DatabaseService {
   }
 
   static async renameCategoryInItems(
-    menuType: 'breakfast' | 'lunch' | 'dinner',
+    menuType: MenuType,
     oldName: string,
     newName: string
   ): Promise<number> {
@@ -677,7 +1180,7 @@ export class DatabaseService {
   }
 
   static async reorderMenuCategories(
-    menuType: 'breakfast' | 'lunch' | 'dinner',
+    menuType: MenuType,
     orderedIds: string[]
   ): Promise<MenuCategory[]> {
     const devDatabase = initDevDB();
@@ -698,7 +1201,7 @@ export class DatabaseService {
       return result.rows.map(row => ({
         id: row.id.toString(),
         name: row.name,
-        menuType: row.menu_type as 'breakfast' | 'lunch' | 'dinner',
+        menuType: row.menu_type as MenuType,
         displayOrder: row.display_order,
         createdAt: new Date(row.created_at)
       }));
@@ -716,6 +1219,7 @@ export class DatabaseService {
     }
 
     try {
+      await ensureHappyHourSupport();
       const result = await sql`
         SELECT * FROM restaurant_hours 
         ORDER BY CASE day_of_week
@@ -729,23 +1233,7 @@ export class DatabaseService {
         END
       `;
       
-      return result.rows.map(row => ({
-        id: row.id.toString(),
-        dayOfWeek: row.day_of_week,
-        openTime: row.open_time,
-        closeTime: row.close_time,
-        isBreakfastService: row.is_breakfast_service,
-        breakfastOpenTime: row.breakfast_open_time,
-        breakfastCloseTime: row.breakfast_close_time,
-        isLunchService: row.is_lunch_service,
-        lunchOpenTime: row.lunch_open_time,
-        lunchCloseTime: row.lunch_close_time,
-        isDinnerService: row.is_dinner_service,
-        dinnerOpenTime: row.dinner_open_time,
-        dinnerCloseTime: row.dinner_close_time,
-        isClosed: row.is_closed,
-        updatedAt: new Date(row.updated_at)
-      }));
+      return result.rows.map(row => mapRestaurantHours(row));
     } catch (error) {
       console.error('Database error:', error);
       return [];
@@ -759,32 +1247,27 @@ export class DatabaseService {
     }
 
     try {
+      await ensureHappyHourSupport();
       const result = await sql`
         INSERT INTO restaurant_hours (
           day_of_week, is_closed, 
           is_breakfast_service, breakfast_open_time, breakfast_close_time,
           is_lunch_service, lunch_open_time, lunch_close_time,
-          is_dinner_service, dinner_open_time, dinner_close_time
+          is_happy_hour_service, happy_hour_open_time, happy_hour_close_time,
+          is_dinner_service, dinner_open_time, dinner_close_time,
+          open_time, close_time
         ) VALUES (
           ${hoursData.dayOfWeek}, ${hoursData.isClosed},
-          ${hoursData.isBreakfastService}, ${hoursData.breakfastOpenTime}, ${hoursData.breakfastCloseTime},
-          ${hoursData.isLunchService}, ${hoursData.lunchOpenTime}, ${hoursData.lunchCloseTime},
-          ${hoursData.isDinnerService}, ${hoursData.dinnerOpenTime}, ${hoursData.dinnerCloseTime}
+          ${hoursData.isBreakfastService}, ${hoursData.breakfastOpenTime ?? null}, ${hoursData.breakfastCloseTime ?? null},
+          ${hoursData.isLunchService}, ${hoursData.lunchOpenTime ?? null}, ${hoursData.lunchCloseTime ?? null},
+          ${hoursData.isHappyHourService}, ${hoursData.happyHourOpenTime ?? null}, ${hoursData.happyHourCloseTime ?? null},
+          ${hoursData.isDinnerService}, ${hoursData.dinnerOpenTime ?? null}, ${hoursData.dinnerCloseTime ?? null},
+          ${hoursData.openTime}, ${hoursData.closeTime}
         )
-        RETURNING id, day_of_week as "dayOfWeek", is_closed as "isClosed",
-                  is_breakfast_service as "isBreakfastService", 
-                  breakfast_open_time as "breakfastOpenTime", 
-                  breakfast_close_time as "breakfastCloseTime",
-                  is_lunch_service as "isLunchService", 
-                  lunch_open_time as "lunchOpenTime", 
-                  lunch_close_time as "lunchCloseTime",
-                  is_dinner_service as "isDinnerService", 
-                  dinner_open_time as "dinnerOpenTime", 
-                  dinner_close_time as "dinnerCloseTime",
-                  updated_at as "updatedAt"
+        RETURNING *
       `;
-      
-      return result.rows[0] as RestaurantHours;
+
+      return result.rows[0] ? mapRestaurantHours(result.rows[0]) : null;
     } catch (error) {
       console.error('Database error:', error);
       return null;
@@ -798,6 +1281,7 @@ export class DatabaseService {
     }
 
     try {
+      await ensureHappyHourSupport();
       const result = await sql`
         UPDATE restaurant_hours
         SET is_closed = COALESCE(${updates.isClosed}, is_closed),
@@ -807,6 +1291,9 @@ export class DatabaseService {
             is_lunch_service = COALESCE(${updates.isLunchService}, is_lunch_service),
             lunch_open_time = COALESCE(${updates.lunchOpenTime}, lunch_open_time),
             lunch_close_time = COALESCE(${updates.lunchCloseTime}, lunch_close_time),
+            is_happy_hour_service = COALESCE(${updates.isHappyHourService}, is_happy_hour_service),
+            happy_hour_open_time = COALESCE(${updates.happyHourOpenTime}, happy_hour_open_time),
+            happy_hour_close_time = COALESCE(${updates.happyHourCloseTime}, happy_hour_close_time),
             is_dinner_service = COALESCE(${updates.isDinnerService}, is_dinner_service),
             dinner_open_time = COALESCE(${updates.dinnerOpenTime}, dinner_open_time),
             dinner_close_time = COALESCE(${updates.dinnerCloseTime}, dinner_close_time),
@@ -818,25 +1305,8 @@ export class DatabaseService {
       `;
       
       if (result.rows.length === 0) return null;
-      
-      const row = result.rows[0];
-      return {
-        id: row.id,
-        dayOfWeek: row.day_of_week,
-        openTime: row.open_time,
-        closeTime: row.close_time,
-        isBreakfastService: row.is_breakfast_service,
-        breakfastOpenTime: row.breakfast_open_time,
-        breakfastCloseTime: row.breakfast_close_time,
-        isLunchService: row.is_lunch_service,
-        lunchOpenTime: row.lunch_open_time,
-        lunchCloseTime: row.lunch_close_time,
-        isDinnerService: row.is_dinner_service,
-        dinnerOpenTime: row.dinner_open_time,
-        dinnerCloseTime: row.dinner_close_time,
-        isClosed: row.is_closed,
-        updatedAt: new Date(row.updated_at)
-      };
+
+      return mapRestaurantHours(result.rows[0]);
     } catch (error) {
       console.error('Database error:', error);
       return null;
@@ -847,36 +1317,40 @@ export class DatabaseService {
   static async getMenuStatuses(): Promise<MenuStatus[]> {
     const devDatabase = initDevDB();
     if (process.env.NODE_ENV !== 'production' && devDatabase?.getMenuStatuses) {
-      return devDatabase.getMenuStatuses();
+      return [...devDatabase.getMenuStatuses()].sort((a, b) => compareMenuTypes(a.menuType, b.menuType));
     }
 
     try {
-      const result = await sql`SELECT * FROM menu_status ORDER BY menu_type`;
-      return result.rows.map(row => ({
+      await ensureHappyHourSupport();
+      const result = await sql`SELECT * FROM menu_status`;
+      const statuses = result.rows.map(row => ({
         id: row.id.toString(),
-        menuType: row.menu_type as 'breakfast' | 'lunch' | 'dinner',
+        menuType: row.menu_type as MenuType,
         isEnabled: row.is_enabled,
         updatedAt: new Date(row.updated_at)
       }));
+      return statuses.sort((a, b) => compareMenuTypes(a.menuType, b.menuType));
     } catch (error) {
       console.error('Database error:', error);
       return [];
     }
   }
 
-  static async updateMenuStatus(menuType: 'breakfast' | 'lunch' | 'dinner', isEnabled: boolean): Promise<MenuStatus[]> {
+  static async updateMenuStatus(menuType: MenuType, isEnabled: boolean): Promise<MenuStatus[]> {
     const devDatabase = initDevDB();
     if (process.env.NODE_ENV !== 'production' && devDatabase?.updateMenuStatus) {
       return devDatabase.updateMenuStatus(menuType, isEnabled);
     }
 
     try {
+      await ensureHappyHourSupport();
       await sql`
-        UPDATE menu_status 
+        INSERT INTO menu_status (menu_type, is_enabled)
+        VALUES (${menuType}, ${isEnabled})
+        ON CONFLICT (menu_type) DO UPDATE
         SET is_enabled = ${isEnabled}, updated_at = CURRENT_TIMESTAMP
-        WHERE menu_type = ${menuType}
       `;
-      
+
       return this.getMenuStatuses();
     } catch (error) {
       console.error('Database error:', error);

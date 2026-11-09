@@ -2,14 +2,14 @@
 
 import { useState, useRef } from 'react';
 import Image from 'next/image';
-import type { MenuItem, MenuCategory } from '../../lib/database';
+import type { MenuItem, MenuCategory, MenuType } from '../../lib/database';
 
 interface MenuItemFormProps {
   onSubmit: (item: Omit<MenuItem, 'id' | 'createdAt' | 'updatedAt'>) => void;
   onCancel: () => void;
   categories: MenuCategory[];
   editingItem?: MenuItem;
-  menuType: 'breakfast' | 'lunch' | 'dinner';
+  menuType: MenuType;
 }
 
 export default function MenuItemForm({ onSubmit, onCancel, categories, editingItem, menuType }: MenuItemFormProps) {
