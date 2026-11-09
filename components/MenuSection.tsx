@@ -82,54 +82,52 @@ export default function MenuSection() {
   const [activeBeverageCategory, setActiveBeverageCategory] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchEnabledMenus();
-    fetchMenuItems();
-    fetchCategories();
-  }, []);
+    let cancelled = false;
 
-  const fetchEnabledMenus = async () => {
-    try {
-      const response = await fetch('/api/menu/enabled');
-      if (response.ok) {
-        const menus = (await response.json()) as MenuType[];
-        // Always use canonical service order — never rely on DB / API row order.
-        const sortedMenus = sortMenuTypes(menus);
-        setEnabledMenus(sortedMenus);
-        // Set active menu to the first enabled menu, or dinner as fallback
-        if (sortedMenus.length > 0) {
-          setActiveMenu(sortedMenus.includes('dinner') ? 'dinner' : sortedMenus[0]);
+    const loadMenu = async () => {
+      setLoading(true);
+
+      try {
+        const [enabledRes, itemsRes, categoriesRes] = await Promise.all([
+          fetch('/api/menu/enabled'),
+          fetch('/api/menu/items'),
+          fetch('/api/menu/categories'),
+        ]);
+
+        if (cancelled) return;
+
+        let nextEnabled: MenuType[] = [];
+        if (enabledRes.ok) {
+          const menus = (await enabledRes.json()) as MenuType[];
+          // Always use canonical service order — never rely on DB / API row order.
+          nextEnabled = sortMenuTypes(menus);
+          setEnabledMenus(nextEnabled);
+          if (nextEnabled.length > 0) {
+            setActiveMenu(nextEnabled.includes('dinner') ? 'dinner' : nextEnabled[0]);
+          }
         }
-      }
-    } catch (error) {
-      console.error('Error fetching enabled menus:', error);
-    }
-  };
 
-  const fetchMenuItems = async () => {
-    try {
-      const response = await fetch('/api/menu/items');
-      if (response.ok) {
-        const items = await response.json();
-        setMenuItems(items.filter((item: MenuItem) => item.isAvailable));
-      }
-    } catch (error) {
-      console.error('Error fetching menu items:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+        if (itemsRes.ok) {
+          const items = await itemsRes.json();
+          setMenuItems(items.filter((item: MenuItem) => item.isAvailable));
+        }
 
-  const fetchCategories = async () => {
-    try {
-      const response = await fetch('/api/menu/categories');
-      if (response.ok) {
-        const cats = await response.json();
-        setAllCategories(cats);
+        if (categoriesRes.ok) {
+          const cats = await categoriesRes.json();
+          setAllCategories(cats);
+        }
+      } catch (error) {
+        console.error('Error loading menu:', error);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    } catch (error) {
-      console.error('Error fetching menu categories:', error);
-    }
-  };
+    };
+
+    loadMenu();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Only show items from enabled menus
   const filteredItems = useMemo(
@@ -140,15 +138,26 @@ export default function MenuSection() {
     [menuItems, activeMenu, enabledMenus]
   );
 
-  const categories = useMemo(
-    () =>
-      allCategories
-        .filter(c => c.menuType === activeMenu)
-        .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
-        .map(c => c.name)
-        .filter(name => filteredItems.some(item => item.category === name)),
-    [allCategories, activeMenu, filteredItems]
-  );
+  const categories = useMemo(() => {
+    const fromCms = allCategories
+      .filter(c => c.menuType === activeMenu)
+      .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
+      .map(c => c.name)
+      .filter(name => filteredItems.some(item => item.category === name));
+
+    if (fromCms.length > 0) return fromCms;
+
+    // Fallback if categories API is empty/slow: derive names from loaded items
+    const seen = new Set<string>();
+    const derived: string[] = [];
+    for (const item of filteredItems) {
+      if (!seen.has(item.category)) {
+        seen.add(item.category);
+        derived.push(item.category);
+      }
+    }
+    return derived;
+  }, [allCategories, activeMenu, filteredItems]);
 
   const foodCategories = useMemo(
     () => categories.filter(name => !isBeverageCategory(name)),
