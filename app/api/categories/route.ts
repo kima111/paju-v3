@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DatabaseService } from '../../../lib/database-service';
+import { isMenuType } from '../../../lib/database';
 import { verifyJWT } from '../../../lib/auth';
 
 export async function GET() {
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!['breakfast', 'lunch', 'dinner'].includes(menuType)) {
+    if (!isMenuType(menuType)) {
       return NextResponse.json(
         { error: 'Invalid menu type' },
         { status: 400 }

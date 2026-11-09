@@ -103,6 +103,12 @@ export async function POST(request: NextRequest) {
         updated_at = CURRENT_TIMESTAMP
     `;
 
+    await sql`
+      INSERT INTO menu_status (menu_type, is_enabled)
+      VALUES ('happy-hour', true)
+      ON CONFLICT (menu_type) DO NOTHING
+    `;
+
     console.log('Menu initialization completed successfully');
 
     // Get counts to return

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@vercel/postgres';
+import { ensureHappyHourSupport } from '../../../../lib/database-service';
 
 export async function POST(request: NextRequest) {
   // Add CORS headers
@@ -70,6 +71,50 @@ export async function POST(request: NextRequest) {
     `;
     console.log('✅ Ensured announcements table exists');
 
+    // Migration 2b: Create accolades table if it doesn't exist
+    await sql`
+      CREATE TABLE IF NOT EXISTS accolades (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        description TEXT DEFAULT '',
+        link TEXT,
+        images JSONB DEFAULT '[]'::jsonb,
+        display_order INTEGER DEFAULT 0,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+    console.log('✅ Ensured accolades table exists');
+
+    // Migration 2c: Create chef_bios table if it doesn't exist
+    await sql`
+      CREATE TABLE IF NOT EXISTS chef_bios (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        role VARCHAR(255) DEFAULT '',
+        title VARCHAR(255) DEFAULT '',
+        quote TEXT DEFAULT '',
+        bio TEXT DEFAULT '',
+        image_url TEXT DEFAULT '',
+        display_order INTEGER DEFAULT 0,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+    console.log('✅ Ensured chef_bios table exists');
+
+    try {
+      await sql`
+        ALTER TABLE chef_bios
+        ADD COLUMN IF NOT EXISTS quote TEXT DEFAULT ''
+      `;
+      console.log('✅ Ensured quote column on chef_bios');
+    } catch (error) {
+      console.log('quote column on chef_bios may already exist:', error);
+    }
+
     // Migration 3: Add display_order to menu_items and backfill
     try {
       await sql`
@@ -94,6 +139,9 @@ export async function POST(request: NextRequest) {
       console.log('display_order migration for menu_items may have been applied already:', error);
     }
 
+    await ensureHappyHourSupport();
+    console.log('✅ Ensured happy hour menu status, menu data, and service hours');
+
     // Check current users
     const userCheck = await sql`SELECT username, role, is_active FROM users`;
     console.log('Current users after migration:', userCheck.rows);
@@ -106,7 +154,10 @@ export async function POST(request: NextRequest) {
         'Added created_at column to users table', 
         'Added updated_at column to users table',
         'Ensured announcements table exists',
-        'Ensured display_order column on menu_items and backfilled nulls'
+        'Ensured accolades table exists',
+        'Ensured chef_bios table exists',
+        'Ensured display_order column on menu_items and backfilled nulls',
+        'Added happy hour menu type, status row, sample menu, and service hours'
       ],
       users: userCheck.rows
     }, { headers });

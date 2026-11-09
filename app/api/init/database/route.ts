@@ -52,6 +52,38 @@ export async function POST(request: NextRequest) {
       )
     `;
 
+    // Create accolades table if it doesn't exist
+    await sql`
+      CREATE TABLE IF NOT EXISTS accolades (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        description TEXT DEFAULT '',
+        link TEXT,
+        images JSONB DEFAULT '[]'::jsonb,
+        display_order INTEGER DEFAULT 0,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
+    // Create chef_bios table if it doesn't exist
+    await sql`
+      CREATE TABLE IF NOT EXISTS chef_bios (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        role VARCHAR(255) DEFAULT '',
+        title VARCHAR(255) DEFAULT '',
+        quote TEXT DEFAULT '',
+        bio TEXT DEFAULT '',
+        image_url TEXT DEFAULT '',
+        display_order INTEGER DEFAULT 0,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
     // Hash the default admin password
     const hashedPassword = await bcrypt.hash('admin123', 10);
 

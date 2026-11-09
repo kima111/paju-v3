@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import type { MenuItem, MenuCategory, MenuStatus } from '../../lib/database';
+import { MENU_TYPES, menuTypeLabel, type MenuItem, type MenuCategory, type MenuStatus, type MenuType } from '../../lib/database';
 import MenuItemForm from './MenuItemForm';
 import CategoryForm from './CategoryForm';
 
@@ -10,11 +10,12 @@ export default function MenuManagement() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [menuStatuses, setMenuStatuses] = useState<MenuStatus[]>([]);
-  const [activeMenuType, setActiveMenuType] = useState<'breakfast' | 'lunch' | 'dinner'>('lunch');
+  const [activeMenuType, setActiveMenuType] = useState<MenuType>('lunch');
   const [showAddForm, setShowAddForm] = useState(false);
   const [showCategoryForm, setShowCategoryForm] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [loading, setLoading] = useState(true);
+  const [statusesLoaded, setStatusesLoaded] = useState(false);
 
   useEffect(() => {
     fetchMenuItems();
@@ -57,6 +58,8 @@ export default function MenuManagement() {
       }
     } catch (error) {
       console.error('Error fetching menu statuses:', error);
+    } finally {
+      setStatusesLoaded(true);
     }
   };
 
@@ -79,7 +82,7 @@ export default function MenuManagement() {
     }
   };
 
-  const toggleMenuStatus = async (menuType: 'breakfast' | 'lunch' | 'dinner') => {
+  const toggleMenuStatus = async (menuType: MenuType) => {
     try {
       const currentStatus = menuStatuses.find(status => status.menuType === menuType);
       const response = await fetch('/api/menu/status', {
@@ -164,7 +167,7 @@ export default function MenuManagement() {
             onClick={() => setShowCategoryForm(true)}
             className="bg-zinc-800 text-white px-4 py-2 text-xs tracking-wider uppercase hover:bg-zinc-700 transition-colors border border-zinc-700"
           >
-            Create {activeMenuType.charAt(0).toUpperCase() + activeMenuType.slice(1)} Category
+            Create {menuTypeLabel(activeMenuType)} Category
           </button>
           <button
             onClick={() => setShowAddForm(true)}
@@ -178,60 +181,46 @@ export default function MenuManagement() {
       {/* Menu Type Selector and Status Controls */}
       <div className="space-y-4">
         {/* Menu Type Tabs */}
-        <div className="flex space-x-4">
-          <button
-            onClick={() => setActiveMenuType('breakfast')}
-            className={`px-6 py-2 text-xs tracking-wider uppercase border ${
-              activeMenuType === 'breakfast'
-                ? 'border-white text-white bg-white/5'
-                : 'border-white/30 text-white/60 hover:text-white hover:border-white/60'
-            } transition-all`}
-          >
-            Breakfast Menu
-          </button>
-          <button
-            onClick={() => setActiveMenuType('lunch')}
-            className={`px-6 py-2 text-xs tracking-wider uppercase border ${
-              activeMenuType === 'lunch'
-                ? 'border-white text-white bg-white/5'
-                : 'border-white/30 text-white/60 hover:text-white hover:border-white/60'
-            } transition-all`}
-          >
-            Lunch Menu
-          </button>
-          <button
-            onClick={() => setActiveMenuType('dinner')}
-            className={`px-6 py-2 text-xs tracking-wider uppercase border ${
-              activeMenuType === 'dinner'
-                ? 'border-white text-white bg-white/5'
-                : 'border-white/30 text-white/60 hover:text-white hover:border-white/60'
-            } transition-all`}
-          >
-            Dinner Menu
-          </button>
+        <div className="flex flex-wrap gap-4">
+          {MENU_TYPES.map((menuType) => (
+            <button
+              key={menuType}
+              onClick={() => setActiveMenuType(menuType)}
+              className={`px-6 py-2 text-xs tracking-wider uppercase border ${
+                activeMenuType === menuType
+                  ? 'border-white text-white bg-white/5'
+                  : 'border-white/30 text-white/60 hover:text-white hover:border-white/60'
+              } transition-all`}
+            >
+              {menuTypeLabel(menuType)} Menu
+            </button>
+          ))}
         </div>
 
         {/* Menu Status Controls */}
         <div className="bg-zinc-900 p-4 border border-zinc-700 space-y-3">
           <h3 className="text-sm font-medium text-white/90 tracking-wider uppercase">Menu Status Controls</h3>
-          {menuStatuses.length === 0 ? (
+          {!statusesLoaded ? (
             <div className="text-white/50 text-xs">Loading menu status...</div>
           ) : (
-            <div className="flex space-x-6">
-              {menuStatuses.map(status => (
-                <label key={status.menuType} className="flex items-center space-x-2 cursor-pointer">
+          <div className="flex flex-wrap gap-x-6 gap-y-3">
+            {MENU_TYPES.map(menuType => {
+              const status = menuStatuses.find(item => item.menuType === menuType);
+              return (
+                <label key={menuType} className="flex items-center space-x-2 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={status.isEnabled}
-                    onChange={() => toggleMenuStatus(status.menuType)}
+                    checked={!!status?.isEnabled}
+                    onChange={() => toggleMenuStatus(menuType)}
                     className="w-4 h-4 text-white bg-transparent border-zinc-600 focus:ring-white focus:ring-2"
                   />
                   <span className="text-xs text-white/70 tracking-wider uppercase">
-                    {status.menuType} Menu
+                    {menuTypeLabel(menuType)} Menu
                   </span>
                 </label>
-              ))}
-            </div>
+              );
+            })}
+          </div>
           )}
           <p className="text-xs text-white/50">
             Disabled menus will not be shown to customers on the public website.
@@ -243,7 +232,7 @@ export default function MenuManagement() {
       <div className="space-y-8">
         {activeCategories.length === 0 ? (
           <div className="text-center py-12 text-white/60">
-            No categories found for {activeMenuType} menu. Add some categories to get started.
+            No categories found for the {menuTypeLabel(activeMenuType).toLowerCase()} menu. Add some categories to get started.
           </div>
         ) : (
           activeCategories.map((category, idx) => (

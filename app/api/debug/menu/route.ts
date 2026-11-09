@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DatabaseService } from '../../../../lib/database-service';
+import { MENU_TYPES } from '../../../../lib/database';
 
 export async function GET(request: NextRequest) {
   // Add CORS headers
@@ -29,11 +30,11 @@ export async function GET(request: NextRequest) {
     const enabledMenus = statuses.filter(s => s.isEnabled).map(s => s.menuType);
 
     // Per-menu counts
-    const byMenuType = ['breakfast', 'lunch', 'dinner'].map(mt => ({
-      menuType: mt as 'breakfast' | 'lunch' | 'dinner',
+    const byMenuType = MENU_TYPES.map(mt => ({
+      menuType: mt,
       categories: allCategories.filter(c => c.menuType === mt).length,
       items: allItems.filter(i => i.menuType === mt).length,
-      enabled: enabledMenus.includes(mt as 'breakfast' | 'lunch' | 'dinner'),
+      enabled: enabledMenus.includes(mt),
     }));
 
     // Sample a few items for quick visibility

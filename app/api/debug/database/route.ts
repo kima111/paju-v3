@@ -49,6 +49,19 @@ export async function GET(request: NextRequest) {
       console.log('Announcements table error:', error);
     }
 
+    // Check if accolades table exists
+    let accolades: Array<{id: number, title: string, is_active: boolean, display_order: number, created_at: string}> = [];
+    try {
+      const result = await sql`
+        SELECT id, title, is_active, display_order, created_at
+        FROM accolades
+        ORDER BY display_order ASC, created_at DESC
+      `;
+      accolades = result.rows as typeof accolades;
+    } catch (error) {
+      console.log('Accolades table error:', error);
+    }
+
     // Check database connection
     const dbInfo = await sql`SELECT current_database(), current_user, version()`;
 
@@ -57,6 +70,7 @@ export async function GET(request: NextRequest) {
       database: dbInfo.rows[0],
       users,
       announcements,
+      accolades,
       environment: process.env.NODE_ENV,
       timestamp: new Date().toISOString()
     }, { headers });

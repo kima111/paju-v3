@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
-import type { MenuItem } from '../lib/database';
+import type { MenuItem, MenuType } from '../lib/database';
 
 interface DynamicMenuProps {
-  menuType?: 'breakfast' | 'lunch' | 'dinner';
+  menuType?: MenuType;
   limit?: number;
 }
 

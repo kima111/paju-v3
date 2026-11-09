@@ -7,6 +7,8 @@ import MenuManagement from '../../components/cms/MenuManagement';
 import HoursManagement from '../../components/cms/HoursManagement';
 import UserManagement from '../../components/cms/UserManagement';
 import AnnouncementManagement from '../../components/cms/AnnouncementManagement';
+import AccoladeManagement from '../../components/cms/AccoladeManagement';
+import ChefBioManagement from '../../components/cms/ChefBioManagement';
 
 export default function CMSPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -238,6 +240,26 @@ export default function CMSPage() {
                 User Management
               </button>
             )}
+            <button
+              onClick={() => setActiveTab('accolades')}
+              className={`py-4 text-xs tracking-wider uppercase border-b-2 transition-colors ${
+                activeTab === 'accolades'
+                  ? 'border-white text-white'
+                  : 'border-transparent text-white/60 hover:text-white'
+              }`}
+            >
+              Accolades Management
+            </button>
+            <button
+              onClick={() => setActiveTab('chef-bios')}
+              className={`py-4 text-xs tracking-wider uppercase border-b-2 transition-colors ${
+                activeTab === 'chef-bios'
+                  ? 'border-white text-white'
+                  : 'border-transparent text-white/60 hover:text-white'
+              }`}
+            >
+              Chef Bio Management
+            </button>
           </div>
         </div>
       </nav>
@@ -248,6 +270,8 @@ export default function CMSPage() {
         {activeTab === 'hours' && <HoursManagement />}
         {activeTab === 'announcements' && <AnnouncementManagement />}
         {activeTab === 'users' && userRole === 'admin' && <UserManagement />}
+        {activeTab === 'accolades' && <AccoladeManagement />}
+        {activeTab === 'chef-bios' && <ChefBioManagement />}
       </main>
     </div>
   );

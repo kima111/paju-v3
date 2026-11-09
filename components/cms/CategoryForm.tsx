@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { menuTypeLabel, type MenuType } from '../../lib/database';
 
 interface CategoryFormProps {
-  onSubmit: (categoryName: string, menuType: 'breakfast' | 'lunch' | 'dinner') => void;
+  onSubmit: (categoryName: string, menuType: MenuType) => void;
   onCancel: () => void;
-  menuType: 'breakfast' | 'lunch' | 'dinner';
+  menuType: MenuType;
 }
 
 export default function CategoryForm({ onSubmit, onCancel, menuType }: CategoryFormProps) {
@@ -30,7 +31,7 @@ export default function CategoryForm({ onSubmit, onCancel, menuType }: CategoryF
   return (
     <div className="bg-zinc-800 border border-zinc-700 p-6 mb-6">
       <h3 className="text-lg font-medium text-white mb-4">
-        Create New {menuType.charAt(0).toUpperCase() + menuType.slice(1)} Category
+        Create New {menuTypeLabel(menuType)} Category
       </h3>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
